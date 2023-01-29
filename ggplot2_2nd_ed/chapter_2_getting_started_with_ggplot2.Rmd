@@ -1,0 +1,593 @@
+---
+title: "Wickham, Hadley - ggplot2: Elegant Graphics for Data Analysis, Chapter 2: Getting Started with ggplot2"
+author: "Original Code: Hadley Wickham (except Matt Dancho for ggdist and tidyquant) | Modifications: Antti Rask"
+date: "2023-01-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 2 Getting Started with ggplot2
+
+```{r}
+library(tidyverse)
+library(conflicted)
+  conflict_prefer("filter", "dplyr")
+  conflict_prefer("select", "dplyr")
+```
+
+## 2.2 Fuel Economy Data
+
+```{r}
+mpg
+```
+
+### 2.2.1 Exercises
+
+1.
+```{r}
+help(mpg)
+
+dim(mpg)
+
+summary(mpg)
+
+str(mpg)
+
+glimpse(mpg)
+```
+
+2.
+```{r}
+data(package = "ggplot2")
+```
+
+3.
+```{r}
+mpg %>% 
+    # Miles per gallon
+    select(cty, hwy) %>% 
+    mutate(
+        cty_eur = 235.21 / cty,
+        hwy_eur = 235.21 / hwy
+    )
+```
+
+4.
+```{r}
+# Without touching models
+mpg %>%
+    distinct(manufacturer, model) %>% 
+    with_groups(
+        manufacturer,
+        summarize,
+        n = n()
+    ) %>%
+    arrange(desc(n))
+```
+
+```{r}
+# With the core models only
+mpg %>%
+    mutate(
+        core_model = str_extract(model, "^\\S+")
+    ) %>%
+    distinct(manufacturer, core_model) %>%
+    with_groups(
+        manufacturer,
+        summarize,
+        n = n()
+    ) %>%
+    arrange(desc(n))
+```
+
+## 2.3 Key Components
+
+```{r}
+mpg %>% 
+    ggplot(aes(displ, hwy)) +
+    geom_point()
+```
+
+### 2.3.1 Exercises
+
+1.
+```{r}
+mpg %>% 
+    ggplot(aes(cty, hwy)) +
+    geom_point()
+```
+
+2.
+```{r}
+# Models and manufacturers
+mpg %>% 
+    ggplot(aes(model, manufacturer)) +
+    geom_point()
+
+# One example solution with the amount of unique models by manufacturer
+mpg %>%
+    mutate(
+        manufacturer = manufacturer %>% as.factor(),
+        core_model = str_extract(model, "^\\S+")
+    ) %>%
+    distinct(manufacturer, core_model) %>%
+    with_groups(
+        manufacturer,
+        summarize,
+        n = n()
+    ) %>%
+    
+    ggplot(aes(fct_reorder(manufacturer, n), n)) +
+    geom_col() +
+    coord_flip() +
+    labs(
+        title    = "Amount of unique models by manufacturer",
+        subtitle = "",
+        x        = "",
+        y        = ""
+    )
+```
+
+3.
+```{r}
+# 1.
+mpg %>% 
+  ggplot(aes(cty, hwy)) +
+  geom_point()
+
+# 2.
+diamonds %>% 
+  ggplot(aes(carat, price)) +
+  geom_point()
+
+# 3.
+economics %>%
+  ggplot(aes(date, unemploy)) +
+  geom_line()
+
+# 4.
+mpg %>% 
+  ggplot(aes(cty)) +
+  geom_histogram()
+```
+
+## 2.4 Color, Size, Shape and Other Aesthetic Attributes
+
+```{r}
+mpg %>%
+ggplot(aes(displ, cty, color = class)) +
+    geom_point()
+```
+
+```{r}
+p <- mpg %>% 
+  ggplot(aes(displ, hwy))
+  
+p +
+  geom_point(aes(color = "blue"))
+
+p +
+  geom_point(color = "blue")
+```
+
+
+### 2.4.1 Exercises
+
+1.
+```{r}
+# Map color to continuous value
+mpg %>% 
+  ggplot(aes(cty, hwy, color = displ)) +
+  geom_point()
+
+# Map color to categorical value
+mpg %>% 
+  ggplot(aes(cty, hwy, color = trans)) +
+  geom_point()
+
+# Use more than one aesthetic in a plot
+mpg %>% 
+  ggplot(aes(cty, hwy, color = trans, size = trans)) +
+  geom_point()
+```
+
+2.
+```{r}
+# Commented out, because causes error and can't see the other plot with the error:
+# mpg %>%
+#   ggplot(aes(cty, hwy, shape = displ)) +
+#   geom_point()
+
+mpg %>% 
+  ggplot(aes(cty, hwy, shape = trans)) +
+  geom_point()
+```
+
+3.
+```{r}
+mpg %>%
+    ggplot(aes(drv, cty)) +
+    geom_boxplot()
+
+mpg %>%
+    ggplot(aes(class, displ)) +
+    geom_point(aes(color = drv))
+```
+
+## 2.5 Faceting
+
+```{r}
+mpg %>%
+  ggplot(aes(displ, hwy)) + 
+  geom_point() +
+  facet_wrap(vars(class))
+```
+
+### 2.5.1. Exercises
+
+1.
+```{r}
+p <- mpg %>% 
+  ggplot(aes(drv, displ, fill = class)) +
+  geom_col(position = "dodge")
+
+p +
+  facet_wrap(vars(hwy))
+
+p +
+  facet_wrap(vars(cyl))
+```
+
+2.
+```{r}
+mpg %>% 
+  ggplot(aes(displ, cty)) +
+  geom_point() +
+  facet_wrap(vars(cyl))
+```
+
+3.
+```{r}
+p <- mpg %>% 
+  ggplot(aes(displ, cty)) +
+  geom_point()
+
+p +
+  facet_wrap(
+    vars(cyl),
+    nrow = 4,
+    ncol = 1
+  )
+
+p +
+  facet_wrap(
+    vars(cyl),
+    nrow = 1,
+    ncol = 4
+  )
+```
+
+## 2.6 Plot Geoms
+
+### 2.6.1 Adding a Smoother to a Plot
+
+```{r}
+mpg %>% 
+  ggplot(aes(displ, hwy)) + 
+  geom_point() + 
+  geom_smooth()
+```
+
+```{r}
+# How span affects the resulting smoother
+p <- mpg %>%
+  ggplot(aes(displ, hwy)) + 
+  geom_point()
+
+p +
+  geom_smooth(span = 0.2)
+
+p + 
+  geom_smooth(span = 1)
+```
+
+#### mgcv
+```{r}
+library(mgcv)
+
+mpg %>%
+  ggplot(aes(displ, hwy)) + 
+  geom_point() + 
+  geom_smooth(method = "gam", formula = y ~ s(x))
+```
+
+```{r}
+# Line of best fit
+mpg %>%
+  ggplot(aes(displ, hwy)) + 
+  geom_point() + 
+  geom_smooth(method = "lm")
+```
+
+### 2.6.2 Boxplots and jittered points
+
+```{r}
+p <- mpg %>%
+  ggplot(aes(drv, hwy)) 
+  
+p +
+  geom_point()
+
+p +
+  geom_jitter()
+
+p +
+  geom_boxplot()
+
+p +
+  geom_violin()
+```
+
+### 2.6.3 Histograms and frequency polygons
+
+```{r}
+p <- mpg %>%
+  ggplot(aes(hwy))
+
+p +
+  geom_histogram()
+
+p +
+  geom_freqpoly()
+
+p + 
+  geom_freqpoly(binwidth = 2.5)
+
+p + 
+  geom_freqpoly(binwidth = 1)
+```
+
+```{r}
+mpg %>% 
+  ggplot(aes(displ, color = drv)) + 
+  geom_freqpoly(binwidth = 0.5)
+
+mpg %>% 
+  ggplot(aes(displ, fill = drv)) + 
+  geom_histogram(binwidth = 0.5) + 
+  facet_wrap(vars(drv), ncol = 1)
+```
+
+### 2.6.4 Bar charts
+
+```{r}
+mpg %>% 
+  ggplot(aes(manufacturer)) + 
+  geom_bar()
+```
+
+```{r}
+drugs <- tibble(
+  drug = c("a", "b", "c"),
+  effect = c(4.2, 9.7, 6.1)
+)
+
+p <- drugs %>% 
+  ggplot(aes(drug, effect))
+  
+p +
+  geom_bar(stat = "identity")
+
+p +
+  geom_point()
+```
+
+### 2.6.5 Time series with line and path plots
+
+```{r}
+economics %>%
+  ggplot(aes(date, unemploy / pop)) +
+  geom_line()
+
+economics %>%
+  ggplot(aes(date, uempmed)) +
+  geom_line()
+```
+
+#### lubridate
+```{r}
+library(lubridate)
+
+# I decided to replace all of this... 
+# year <- function(x) as.POSIXlt(x)$year + 1900
+# ... with the year() function from lubridate
+
+p <- economics %>% 
+  ggplot(aes(unemploy / pop, uempmed))
+
+p +
+  geom_path() +
+  geom_point()
+
+p +
+  geom_path(color = "grey50") +
+  geom_point(aes(color = year(date)))
+```
+
+### 2.6.6 Exercises
+
+1.
+```{r}
+mpg %>%
+  ggplot(aes(cty, hwy)) +
+  geom_jitter(alpha = 0.5)
+```
+
+2.
+```{r}
+mpg %>%
+  ggplot(aes(class, hwy)) +
+  geom_boxplot()
+
+mpg %>%
+  ggplot(aes(reorder(class, hwy), hwy)) +
+  geom_boxplot()
+```
+
+3.
+```{r}
+diamonds %>% 
+  ggplot(aes(carat)) +
+  geom_histogram(binwidth = 0.3)
+```
+
+4.
+```{r}
+diamonds %>% 
+  ggplot(aes(fct_reorder(cut, price), price)) +
+  geom_boxplot()
+
+diamonds %>% 
+  ggplot(aes(price, after_stat(density), color = cut)) +
+  geom_freqpoly(binwidth = 200)
+```
+
+6.
+```{r}
+?geom_bar()
+
+p <- mpg %>%
+  ggplot(aes(class))
+
+p +
+  geom_bar()
+
+p +
+  geom_bar(aes(weight = displ))
+```
+
+## 2.7 Modifying the axes
+
+```{r}
+p <- mpg %>%
+  ggplot(aes(cty, hwy)) +
+  geom_point(alpha = 1 / 3)
+
+p
+
+p +
+  labs(
+    x = "city driving (mpg)",
+    y = "highway driving (mpg)"
+  )
+
+# Remove the axis labels with NULL
+p +
+  labs(
+    x = NULL,
+    y = NULL
+  )
+```
+
+```{r}
+p <- mpg %>%
+  ggplot(aes(drv, hwy)) +
+  geom_jitter(width = 0.25)
+
+p
+
+p + 
+  xlim("f", "r") + 
+  ylim(20, 30)
+
+# For continuous scales, use NA to set only one limit
+mpg %>%
+  ggplot(aes(drv, hwy)) +
+  geom_jitter(width = 0.25, na.rm = TRUE) + 
+  ylim(NA, 30)
+```
+
+## 2.8 Output
+
+```{r}
+p <- mpg %>%
+  ggplot(aes(displ, hwy, color = factor(cyl))) +
+  geom_point()
+```
+
+```{r}
+p
+
+print(p)
+```
+
+```{r}
+# Save png to disk
+ggsave("img/plot.png", p, width = 5, height = 5)
+```
+
+```{r}
+summary(p)
+```
+
+```{r}
+saveRDS(p, "output/plot.rds")
+q <- readRDS("output/plot.rds")
+q
+```
+
+## 2.X Raincloud plot with ggdist and tidyquant
+
+Original from: https://www.business-science.io/r/2021/07/22/ggdist-raincloud-plots.html
+
+```{r}
+library(ggdist)
+library(tidyquant)
+
+mpg %>%
+  ggplot(aes(factor(drv), hwy, fill = factor(drv))) +
+  
+  # Add half-violin from {ggdist} package
+  stat_halfeye(
+    # Custom bandwidth
+    adjust        = 0.5,
+    # Move geom to the right
+    justification = -.2,
+    # Remove slab interval
+    .width        = 0,
+    point_color   = NA
+  ) +
+    
+  # Add boxplot
+  geom_boxplot(
+    width          = .12,
+    # Remove outliers
+    outlier.color  = NA,
+    alpha          = 0.5
+  ) +
+  
+  # Add dot plots from {ggdist} package
+  stat_dots(
+    # Orientation to the left
+    side = "left",
+    # Move geom to the left
+    justification = 1.1,
+    # Adjust grouping (binning) of observations
+    binwidth = .25
+  ) +
+    
+  # Adjust theme
+  scale_fill_tq() +
+  theme_tq() +
+  labs(
+    title    = "Raincloud plot",
+    subtitle = "Is it better to get all the information in one plot?",
+    x        = "Drivetrain Type",
+    y        = "Highway Fuel Economy (MPG)",
+    fill     = "Drivetrain"
+  ) +
+  coord_flip()
+```
