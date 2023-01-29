@@ -18,7 +18,7 @@ library(conflicted)
   conflict_prefer("select", "dplyr")
 ```
 
-## 2.2 Fuel Economy Data
+## 2.2 Fuel economy data
 
 ```{r}
 mpg
@@ -83,7 +83,7 @@ mpg %>%
     arrange(desc(n))
 ```
 
-## 2.3 Key Components
+## 2.3 Key components
 
 ```{r}
 mpg %>% 
@@ -154,7 +154,7 @@ mpg %>%
   geom_histogram()
 ```
 
-## 2.4 Color, Size, Shape and Other Aesthetic Attributes
+## 2.4 Color, size, shape and other aesthetic attributes
 
 ```{r}
 mpg %>%
@@ -172,7 +172,6 @@ p +
 p +
   geom_point(color = "blue")
 ```
-
 
 ### 2.4.1 Exercises
 
@@ -272,7 +271,7 @@ p +
 
 ## 2.6 Plot Geoms
 
-### 2.6.1 Adding a Smoother to a Plot
+### 2.6.1 Adding a smoother to a plot
 
 ```{r}
 mpg %>% 
