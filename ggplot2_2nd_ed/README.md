@@ -1,3 +1,5 @@
+![](img/youcanbeapirate-wb-sparkline.jpg)
+
 # Wickham, Hadley - ggplot2: Elegant Graphics for Data Analysis (2nd ed.)
 
 I've tried to comment on the changes I've made to the code, but there are some frequent changes that I'll comment on here so I don't have to repeat myself constantly.
@@ -6,4 +8,3 @@ I've tried to comment on the changes I've made to the code, but there are some f
 * There have been some changes to ggplot2 since 2016:
     * __fun.y__ parameter has become __fun__
     * __size__ has become __linewidth__ (for all geoms that use lines)
-    

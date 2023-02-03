@@ -295,6 +295,7 @@ p +
 ```
 
 #### mgcv
+
 ```{r}
 library(mgcv)
 
@@ -398,6 +399,7 @@ economics %>%
 ```
 
 #### lubridate
+
 ```{r}
 library(lubridate)
 
@@ -539,9 +541,9 @@ q <- readRDS("output/plot.rds")
 q
 ```
 
-## 2.X Raincloud plot with ggdist and tidyquant
+## 2.X Raincloud plot with ggdist
 
-Original from: https://www.business-science.io/r/2021/07/22/ggdist-raincloud-plots.html
+https://www.business-science.io/r/2021/07/22/ggdist-raincloud-plots.html
 
 ```{r}
 library(ggdist)
