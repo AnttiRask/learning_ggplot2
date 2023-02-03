@@ -123,7 +123,7 @@ tbl %>%
 
 ```{r}
 tbl <- tibble(
-  trt = c("a", "b", "c"),
+  trt  = c("a", "b", "c"),
   resp = c(1.2, 3.4, 2.5)
   )
 
@@ -194,7 +194,11 @@ economics %>%
 ```{r}
 presidential_filtered <- presidential %>%
   # subset + economics$date[1] -> filter + min(economics$date)
-  filter(start > min(economics$date))
+  filter(
+    start > min(economics$date),
+    # added the second filter, because the economics data ends way before the presidential one
+    start < max(economics$date)
+  )
 
 economics %>%
   ggplot() +
@@ -351,23 +355,17 @@ Oxboys %>%
 ### 3.5.3 Overriding the Default Grouping
 
 ```{r}
-Oxboys %>%
+p <- Oxboys %>%
   ggplot(aes(Occasion, height)) + 
   geom_boxplot()
-```
 
-```{r}
+p
+
 # Don't do this!
-Oxboys %>%
-  ggplot(aes(Occasion, height)) + 
-  geom_boxplot() +
+p +
   geom_line(color = "#3366FF", alpha = 0.5)
-```
 
-```{r}
-Oxboys %>%
-  ggplot(aes(Occasion, height)) + 
-  geom_boxplot() +
+p +
   geom_line(
     aes(group = Subject),
     color     = "#3366FF",
@@ -380,18 +378,19 @@ Oxboys %>%
 ```{r}
 tbl <- tibble(x = 1:3, y = 1:3, color = c(1,3,5))
 
+# 1
 tbl %>%
   ggplot(aes(x, y, color = factor(color))) + 
   geom_line(aes(group = 1), linewidth = 2) +
   geom_point(size = 5)
 
+# 2
 tbl %>%
   ggplot(aes(x, y, color = color)) + 
   geom_line(aes(group = 1), linewidth = 2) +
   geom_point(size = 5)
-```
 
-```{r}
+# 3
 xgrid <- with(
   tbl,
   seq(min(x), max(x), length = 50)
@@ -457,19 +456,22 @@ mpg %>%
 tbl <- tibble(x = 1:3, y = 1:3, color = c(1,3,5))
 
 # Group = 1
-ggplot(tbl, aes(x, y, color = factor(color))) + 
+p <- tbl %>%
+  ggplot(aes(x, y, color = factor(color)))
+  
+p +
   geom_line(aes(group = 1), linewidth = 2) +
   geom_point(size = 5) +
   labs(title = "Group = 1")
 
 # Group = 1 omitted
-ggplot(tbl, aes(x, y, color = factor(color))) + 
+p + 
   geom_line(linewidth = 2) +
   geom_point(size = 5) +
   labs(title = "Group = 1 omitted")
 
 # Group = 2
-ggplot(tbl, aes(x, y, color = factor(color))) + 
+p + 
   geom_line(aes(group = 2), linewidth = 2) +
   geom_point(size = 5) +
   labs(title = "Group = 2")
@@ -509,15 +511,14 @@ hadley %>%
 ## 3.6 Surface Plots
 
 ```{r}
-faithfuld %>%
-  ggplot(aes(eruptions, waiting)) +
+p <- faithfuld %>%
+  ggplot(aes(eruptions, waiting))
+
+p +
   # ..level.. -> after_stat(level)
   geom_contour(aes(z = density, color = after_stat(level)))
-```
 
-```{r}
-faithfuld %>%
-  ggplot(aes(eruptions, waiting)) + 
+p +
   geom_raster(aes(fill = density))
 ```
 
@@ -572,18 +573,18 @@ p +
 ```
 
 ```{r}
-# library(lubridate)
-# library(USAboundaries)
-# 
-# c18 <- usboundaries(date("1820-01-01"))
-# c18tbl <- fortify(c18) %>% as_tibble()
-# 
-# head(c18tbl)
-# 
-# c18tbl %>% 
-#   ggplot(aes(long, lat, group = group)) +
-#   geom_polygon(color = "grey50", fill = NA) +
-#   coord_quickmap()
+library(lubridate)
+library(USAboundaries)
+
+c18    <- usboundaries(date("1820-01-01"))
+c18tbl <- fortify(c18) %>% as_tibble()
+
+head(c18tbl)
+
+c18tbl %>%
+  ggplot(aes(long, lat, group = group)) +
+  geom_polygon(color = "grey50", fill = NA) +
+  coord_quickmap()
 ```
 
 ### 3.7.2 Point Metadata
@@ -626,9 +627,9 @@ mi_cities %>%
 
 ### 3.7.3 Raster Images
 
-Both old and new examples had problems...
+Both the old and new examples had problems (which I opened an GitHub issue about)...
 
-Let's try this instead: https://tmieno2.github.io/R-as-GIS-for-Economists/create-maps.html
+So, let's try one this instead: https://tmieno2.github.io/R-as-GIS-for-Economists/create-maps.html
 
 #### 3.7.3.1 Creating maps from sf objects
 
@@ -691,17 +692,17 @@ p +
   )
 
 gw_Stevens %>%
-  cbind(., st_coordinates(.)) %>%
-   mutate(
-     east_west = ifelse(
-       X < -101.3,
-       "west",
-       "east")
-   ) %>%
+  mutate(coordinates = st_coordinates(.)) %>% 
+  rowwise() %>%
+  mutate(
+    X           = coordinates[1],
+    east_west   = case_when(
+      X < -101.3 ~ "west",
+      TRUE       ~ "east"
+    )
+  ) %>%
   ggplot() +
-  geom_sf(
-    aes(shape = east_west, color = east_west)
-  )
+  geom_sf(aes(shape = east_west, color = east_west))
 ```
 
 ```{r}
@@ -794,8 +795,10 @@ ggplot() +
 
 ```{r}
 # Adding texts (labels) on a map
-ggplot() +
-  geom_sf(data = KS_county) +
+p <- ggplot() +
+  geom_sf(data = KS_county) 
+
+p +
   geom_sf_text(
     data      = KS_county,
     aes(label = NAME),
@@ -803,8 +806,7 @@ ggplot() +
     color     = "blue"
   )
 
-ggplot() +
-  geom_sf(data = KS_county) +
+p +
   geom_sf_text(
     data          = KS_county,
     aes(label     = NAME),
@@ -813,8 +815,7 @@ ggplot() +
     color         = "blue"
   )
 
-ggplot() +
-  geom_sf(data = KS_county) +
+p +
   geom_sf_text(
     data          = KS_county,
     aes(label     = NAME),
@@ -834,7 +835,7 @@ Cheyenne <- KS_county %>%
 KS_less_Cheyenne <- KS_county %>% 
   filter(NAME != "Cheyenne")
 
-ggplot() +
+p <- ggplot() +
   geom_sf(data = KS_county) +
   geom_sf_text(
     data          = KS_less_Cheyenne,
@@ -844,7 +845,9 @@ ggplot() +
     color         = "blue",
     nudge_x       = -0.1,
     nudge_y       = 0.1
-  ) +
+  ) 
+
+p +
   geom_sf_text(
     data          = Cheyenne,
     aes(label     = NAME),
@@ -854,18 +857,7 @@ ggplot() +
   )
 
 # With annotate()
-ggplot() +
-  geom_sf(data = KS_county) +
-  geom_sf_text(
-    data          = KS_less_Cheyenne,
-    aes(label     = NAME),
-    check_overlap = TRUE,
-    size          = 3,
-    color         = "blue",
-    nudge_x       = -0.1,
-    nudge_y       = 0.1
-  ) +
-  #--- use annotate to add texts on the map ---#
+p +
   annotate(
     geom  = "text",
     x     = -102,
@@ -1191,13 +1183,14 @@ p +
 ```
 
 ```{r}
-midwest %>%
-  ggplot(aes(percbelowpoverty)) +
+p <- midwest %>%
+  ggplot(aes(percbelowpoverty))
+
+p +
   geom_histogram(binwidth = 1) + 
   labs(y = "Counties")
 
-midwest %>% 
-  ggplot(aes(percbelowpoverty)) +
+p +
   geom_histogram(
     aes(weight = poptotal),
     binwidth = 1
