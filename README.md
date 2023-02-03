@@ -1,3 +1,5 @@
+![](ggplot2_2nd_ed/img/youcanbeapirate-wb-sparkline.jpg)
+
 # Learning ggplot2
 
 I'm learning __{ggplot2}__ by reading the book __ggplot2: Elegant Graphics for Data Analysis__ by __Hadley Wickham__.

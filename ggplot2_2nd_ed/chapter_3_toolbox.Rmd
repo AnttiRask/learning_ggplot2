@@ -1,0 +1,1595 @@
+---
+title: "Wickham, Hadley - ggplot2: Elegant Graphics for Data Analysis, Chapter 3 - Toolbox"
+author: "Original Code: Hadley Wickham (except Taro Mieno for Raster Images, Duncan Murdoch for rgl and Dr. Dominic Royé for OpenStreetMaps) | Modifications: Antti Rask"
+date: "2023-01-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 3 Toolbox
+
+```{r}
+library(tidyverse)
+library(conflicted)
+  conflict_prefer("filter", "dplyr")
+  conflict_prefer("select", "dplyr")
+```
+
+## 3.2 Basic Plot Types
+
+```{r}
+tbl <- tibble(
+  x     = c(3, 1, 5), 
+  y     = c(2, 4, 6), 
+  label = c("a","b","c")
+)
+
+p <- tbl %>% 
+  ggplot(aes(x, y, label = label)) + 
+  # Hide axis label
+  labs(
+    x = NULL,
+    y = NULL
+  ) +
+  # Shrink plot title
+  theme(plot.title = element_text(size = 12))
+
+p +
+  geom_point() +
+  ggtitle("point")
+
+p +
+  geom_text() +
+  ggtitle("text")
+
+p +
+  geom_bar(stat = "identity") +
+  ggtitle("bar")
+
+p +
+  geom_tile() +
+  ggtitle("raster")
+```
+
+```{r}
+p +
+  geom_line() +
+  ggtitle("line")
+
+p +
+  geom_area() +
+  ggtitle("area")
+
+p +
+  geom_path() +
+  ggtitle("path")
+
+p +
+  geom_polygon() +
+  ggtitle("polygon")
+```
+
+## 3.3 Labels
+
+```{r}
+tbl <- tibble(
+  x      = 1,
+  y      = 3:1,
+  family = c("sans", "serif", "mono")
+)
+
+tbl %>%
+  ggplot(aes(x, y)) + 
+  geom_text(aes(label = family, family = family))
+```
+
+```{r}
+tbl <- tibble(
+  x    = 1,
+  y    = 3:1,
+  face = c("plain", "bold", "italic")
+)
+
+tbl %>%
+  ggplot(aes(x, y)) + 
+  geom_text(aes(label = face, fontface = face))
+```
+
+```{r}
+tbl <- tibble(
+  x    = c(1, 1, 2, 2, 1.5),
+  y    = c(1, 2, 1, 2, 1.5),
+  text = c(
+    "bottom-left", "top-left",  
+    "bottom-right", "top-right", "center"
+  )
+)
+
+tbl %>%
+  ggplot(aes(x, y)) +
+  geom_text(aes(label = text))
+
+tbl %>%
+  ggplot(aes(x, y)) +
+  geom_text(
+    aes(label = text),
+    vjust = "inward",
+    hjust = "inward"
+  )
+```
+
+```{r}
+tbl <- tibble(
+  trt = c("a", "b", "c"),
+  resp = c(1.2, 3.4, 2.5)
+  )
+
+tbl %>%
+  ggplot(aes(resp, trt)) + 
+  geom_point() + 
+  geom_text(
+    # paste0 -> str_c
+    aes(label = str_c("(", resp, ")")),
+    nudge_y   = -0.25
+  ) +
+  xlim(1, 3.6)
+```
+
+```{r}
+mpg %>%
+  ggplot(aes(displ, hwy)) + 
+  geom_text(aes(label = model)) + 
+  xlim(1, 8)
+
+mpg %>%
+  ggplot(aes(displ, hwy)) + 
+  geom_text(aes(label = model), check_overlap = TRUE) +
+  xlim(1, 8)
+```
+
+```{r}
+tbl <- tibble(
+  waiting   = c(55, 80), 
+  eruptions = c(2, 4.3), 
+  label     = c("peak one", "peak two")
+)
+
+faithfuld %>%
+  ggplot(aes(waiting, eruptions)) +
+  geom_tile(aes(fill = density)) + 
+  geom_label(data = tbl, aes(label = label))
+```
+
+### directlabels
+
+```{r}
+library(directlabels)
+
+p <-
+  mpg %>%
+  ggplot(aes(displ, hwy, color = class))
+
+p +
+  geom_point()
+
+p + 
+  geom_point(show.legend = FALSE) +
+  geom_dl(
+    aes(label = class),
+    method    = "smart.grid"
+  )
+```
+
+## 3.4 Annotations
+
+```{r}
+economics %>% 
+  ggplot(aes(date, unemploy)) + 
+  geom_line()
+```
+
+```{r}
+presidential_filtered <- presidential %>%
+  # subset + economics$date[1] -> filter + min(economics$date)
+  filter(start > min(economics$date))
+
+economics %>%
+  ggplot() +
+  geom_rect(
+    aes(xmin = start, xmax = end, fill = party),
+    ymin  = -Inf,
+    ymax  = Inf,
+    alpha = 0.2,
+    data  = presidential_filtered
+  ) +
+  geom_vline(
+    aes(xintercept = as.numeric(start)),
+    data  = presidential_filtered,
+    color = "grey50",
+    alpha = 0.5
+  ) +
+  geom_text(
+    aes(x = start, y = 2500, label = name),
+    data    = presidential_filtered,
+    size    = 3,
+    vjust   = 0,
+    hjust   = 0,
+    nudge_x = 50
+  ) +
+  geom_line(aes(date, unemploy)) +
+  scale_fill_manual(values = c("blue", "red")) +
+  labs(
+    x = "date",
+    y = "unemployment"
+  )
+```
+
+```{r}
+yrng <- range(economics$unemploy)
+xrng <- range(economics$date)
+
+# paste -> str_c
+caption <- str_c(
+  # strwrap -> str_wrap
+  str_wrap(
+    "Unemployment rates in the US have varied a lot over the years",
+    40
+  ),
+  collapse = "\n"
+)
+
+economics %>%
+  ggplot(aes(date, unemploy)) + 
+  geom_line() + 
+  geom_text(
+    aes(x, y, label = caption), 
+    data = tibble(
+      # xrng[1] -> min(xrng)
+      x       = min(xrng),
+      # yrng[2] -> max(yrng)
+      y       = max(yrng),
+      caption = caption
+    ), 
+    hjust = 0,
+    vjust = 1,
+    size  = 4
+  )
+
+# Same, but easier thanks to annotate()
+economics %>%
+ggplot(aes(date, unemploy)) + 
+  geom_line() + 
+  annotate(
+    geom  = "text",
+    # xrng[1] -> min(xrng)
+    x     = min(xrng),
+    # yrng[2] -> max(yrng)
+    y     = max(yrng),
+    label = caption,
+    hjust = 0,
+    vjust = 1,
+    size  = 4
+  )
+```
+
+```{r}
+diamonds %>%
+  ggplot(aes(log10(carat), log10(price))) + 
+  geom_bin2d() + 
+  facet_wrap(
+    vars(cut),
+    nrow = 1
+  )
+```
+
+```{r}
+mod_coef <- coef(lm(log10(price) ~ log10(carat), data = diamonds))
+
+diamonds %>%
+  ggplot(aes(log10(carat), log10(price))) + 
+  geom_bin2d() +
+  geom_abline(
+    intercept = mod_coef[1],
+    slope     = mod_coef[2],
+    color     = "white",
+    linewidth = 1
+  ) + 
+  facet_wrap(
+    vars(cut),
+    nrow = 1
+  )
+```
+
+## 3.5 Collective Geoms
+
+```{r}
+data(Oxboys, package = "nlme")
+head(Oxboys)
+```
+
+### 3.5.1 Multiple Groups, One Aesthetic
+
+```{r}
+Oxboys %>%
+  ggplot(aes(age, height, group = Subject)) + 
+  geom_point() + 
+  geom_line()
+```
+
+```{r}
+# Don't do this!
+Oxboys %>%
+ggplot(aes(age, height)) + 
+  geom_point() + 
+  geom_line()
+```
+
+### 3.5.2 Different Groups on Different Layers
+
+```{r}
+# Don't do this!
+Oxboys %>% 
+  ggplot(aes(age, height, group = Subject)) + 
+  geom_line() + 
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+```{r}
+Oxboys %>%
+  ggplot(aes(age, height)) + 
+  geom_line(aes(group = Subject)) + 
+  geom_smooth(
+    method    = "lm",
+    linewidth = 2,
+    se        = FALSE
+  )
+```
+
+### 3.5.3 Overriding the Default Grouping
+
+```{r}
+Oxboys %>%
+  ggplot(aes(Occasion, height)) + 
+  geom_boxplot()
+```
+
+```{r}
+# Don't do this!
+Oxboys %>%
+  ggplot(aes(Occasion, height)) + 
+  geom_boxplot() +
+  geom_line(color = "#3366FF", alpha = 0.5)
+```
+
+```{r}
+Oxboys %>%
+  ggplot(aes(Occasion, height)) + 
+  geom_boxplot() +
+  geom_line(
+    aes(group = Subject),
+    color     = "#3366FF",
+    alpha     = 0.5
+  )
+```
+
+### 3.5.4 Matching Aesthetics to Graphic Objects
+
+```{r}
+tbl <- tibble(x = 1:3, y = 1:3, color = c(1,3,5))
+
+tbl %>%
+  ggplot(aes(x, y, color = factor(color))) + 
+  geom_line(aes(group = 1), linewidth = 2) +
+  geom_point(size = 5)
+
+tbl %>%
+  ggplot(aes(x, y, color = color)) + 
+  geom_line(aes(group = 1), linewidth = 2) +
+  geom_point(size = 5)
+```
+
+```{r}
+xgrid <- with(
+  tbl,
+  seq(min(x), max(x), length = 50)
+)
+
+interpolation <- tibble(
+  x = xgrid,
+  y = approx(
+    x    = tbl$x,
+    y    = tbl$y,
+    xout = xgrid)$y,
+  color = approx(
+    tbl$x,
+    tbl$color,
+    xout = xgrid)$y
+)
+
+interpolation %>%
+  ggplot(aes(x, y, color = color)) + 
+  geom_line(linewidth = 2) +
+  geom_point(data = tbl, size = 5)
+```
+
+```{r}
+mpg %>%
+  ggplot(aes(class)) + 
+  geom_bar()
+
+mpg %>% 
+  ggplot(aes(class, fill = drv)) + 
+  geom_bar()
+```
+
+```{r}
+# Don't do this!
+mpg %>% 
+  ggplot(aes(class, fill = hwy)) + 
+  geom_bar()
+
+mpg %>%
+  ggplot(aes(class, fill = hwy, group = hwy)) + 
+  geom_bar()
+```
+
+### 3.5.5 Exercises
+
+1.
+```{r}
+mpg %>% 
+  ggplot(aes(cyl, hwy, group = cyl)) +
+  geom_boxplot()
+```
+
+2.
+```{r}
+mpg %>%
+  ggplot(aes(displ, cty, group = as.integer(displ))) + 
+  geom_boxplot()
+```
+
+3.
+```{r}
+tbl <- tibble(x = 1:3, y = 1:3, color = c(1,3,5))
+
+# Group = 1
+ggplot(tbl, aes(x, y, color = factor(color))) + 
+  geom_line(aes(group = 1), linewidth = 2) +
+  geom_point(size = 5) +
+  labs(title = "Group = 1")
+
+# Group = 1 omitted
+ggplot(tbl, aes(x, y, color = factor(color))) + 
+  geom_line(linewidth = 2) +
+  geom_point(size = 5) +
+  labs(title = "Group = 1 omitted")
+
+# Group = 2
+ggplot(tbl, aes(x, y, color = factor(color))) + 
+  geom_line(aes(group = 2), linewidth = 2) +
+  geom_point(size = 5) +
+  labs(title = "Group = 2")
+```
+
+4.
+```{r}
+mpg %>%
+  ggplot(aes(drv)) + 
+  geom_bar(color = "white")
+
+mpg %>%
+  ggplot(aes(drv, fill = hwy, group = hwy)) + 
+  geom_bar(color = "white")
+
+mpg2 <- mpg %>%
+  arrange(hwy) %>%
+  mutate(id = seq_along(hwy))
+
+mpg2 %>% 
+  ggplot(aes(drv, fill = hwy, group = id)) + 
+  geom_bar(color = "white")
+```
+
+5.
+```{r}
+library(babynames)
+
+hadley <- babynames %>% 
+  filter(name == "Hadley")
+
+hadley %>%
+  ggplot(aes(year, n, group = sex, color = sex)) + 
+  geom_line()
+```
+
+## 3.6 Surface Plots
+
+```{r}
+faithfuld %>%
+  ggplot(aes(eruptions, waiting)) +
+  # ..level.. -> after_stat(level)
+  geom_contour(aes(z = density, color = after_stat(level)))
+```
+
+```{r}
+faithfuld %>%
+  ggplot(aes(eruptions, waiting)) + 
+  geom_raster(aes(fill = density))
+```
+
+```{r}
+# Bubble plots work better with fewer observations
+small <- faithfuld %>%
+  slice(seq(1, nrow(.), 10))
+small
+
+# Or alternatively
+small2 <- faithfuld %>%
+  slice(which(row_number() %% 10 == 1))
+small2
+
+# Or alternatively
+small3 <- faithfuld %>% 
+   filter(row_number() %% 10 == 1)
+small3
+
+small %>%
+  ggplot(aes(eruptions, waiting)) +
+  geom_point(aes(size = density), alpha = 1/3) +
+  scale_size_area()
+```
+
+## 3.7 Drawing Maps
+
+### 3.7.1 Vector Boundaries
+
+```{r}
+mi_counties <- map_data("county", "michigan") %>%
+  as_tibble() %>%
+  select(lon = long, lat, group, id = subregion)
+  
+head(mi_counties)
+```
+
+```{r}
+p <- mi_counties %>%
+  ggplot(aes(lon, lat, group = group))
+  
+p +
+  geom_polygon() +
+  coord_quickmap()
+
+p +
+  geom_polygon(
+    fill = NA, 
+    color = "grey50"
+  ) + 
+  coord_quickmap()
+```
+
+```{r}
+# library(lubridate)
+# library(USAboundaries)
+# 
+# c18 <- usboundaries(date("1820-01-01"))
+# c18tbl <- fortify(c18) %>% as_tibble()
+# 
+# head(c18tbl)
+# 
+# c18tbl %>% 
+#   ggplot(aes(long, lat, group = group)) +
+#   geom_polygon(color = "grey50", fill = NA) +
+#   coord_quickmap()
+```
+
+### 3.7.2 Point Metadata
+
+```{r}
+library(maps)
+
+mi_cities <- us.cities %>% 
+  # tbl_df -> as_tibble
+  as_tibble() %>%
+  filter(country.etc == "MI") %>% 
+  select(-country.etc, lon = long) %>% 
+  arrange(desc(pop))
+
+mi_cities
+```
+
+```{r}
+# Don't do this!
+mi_cities %>% 
+  ggplot(aes(lon, lat, size = pop)) +
+  geom_point() +
+  scale_size_area() +
+  coord_quickmap()
+```
+
+```{r}
+mi_cities %>% 
+  ggplot(aes(lon, lat)) +
+  geom_polygon(
+    aes(group = group),
+    mi_counties,
+    fill  = NA,
+    color = "grey50"
+  ) +
+  geom_point(aes(size = pop), color = "red") +
+  scale_size_area() +
+  coord_quickmap()
+```   
+
+### 3.7.3 Raster Images
+
+Both old and new examples had problems...
+
+Let's try this instead: https://tmieno2.github.io/R-as-GIS-for-Economists/create-maps.html
+
+#### 3.7.3.1 Creating maps from sf objects
+
+```{r}
+# Read in the KS wells data
+gw_KS_sf <- readRDS("input/gw_KS_sf.rds")
+gw_KS_sf
+```
+
+```{r}
+# Polygons
+library(sf)
+library(tigris)
+
+KS_county <- counties(
+  state = "Kansas",
+  cb    = TRUE
+) %>%
+  st_as_sf() %>%
+  st_transform(st_crs(gw_KS_sf))
+
+KS_county
+```
+
+```{r}
+# Points
+g_wells <- gw_KS_sf %>% 
+  ggplot() +
+  geom_sf()
+
+g_wells
+```
+
+```{r}
+g_county <- KS_county %>%
+  ggplot() +
+  geom_sf()
+
+g_county
+```
+
+```{r}
+# Points
+gw_Stevens <- KS_county %>%
+  filter(NAME == "Stevens") %>%
+  st_crop(gw_KS_sf, .)
+
+p <- 
+  gw_Stevens %>% 
+  ggplot()
+
+p +
+  geom_sf(aes(color = af_used), size = 2)
+
+p +
+  geom_sf(
+    aes(size = af_used),
+    color    = "blue",
+    shape    = 15
+  )
+
+gw_Stevens %>%
+  cbind(., st_coordinates(.)) %>%
+   mutate(
+     east_west = ifelse(
+       X < -101.3,
+       "west",
+       "east")
+   ) %>%
+  ggplot() +
+  geom_sf(
+    aes(shape = east_west, color = east_west)
+  )
+```
+
+```{r}
+# Polygons
+KS_county %>%
+  ggplot() +
+  geom_sf(color = "red", fill = "darkgreen")
+
+KS_county_with_pumping <- gw_KS_sf %>%
+  filter(year == 2010) %>%
+  aggregate(., KS_county, sum, na.rm = TRUE)
+
+KS_county_with_pumping %>%
+  ggplot() +
+  geom_sf(aes(fill = af_used))
+```
+
+```{r}
+# Plotting multiple spatial objects in one figure
+ggplot() +
+  geom_sf(data = gw_KS_sf, size = 0.4) +
+  geom_sf(data = KS_county, fill = NA)
+```
+
+```{r}
+# CRS
+st_crs(KS_county)
+```
+
+```{r}
+# Convert the CRS to WGS 84/UTM zone 14N (EPSG code: 32614)
+g_32614 <- st_transform(KS_county, 32614) %>%
+  ggplot() +
+  geom_sf()
+
+g_county
+g_32614
+
+# Alternatively
+KS_county %>%
+  ggplot() +
+  geom_sf() +
+  coord_sf(crs = 32614)
+```
+
+```{r}
+# CRS of the first layer is applied for all the layers
+ggplot() +
+  geom_sf(
+    data = st_transform(KS_county, 32614)
+  ) +
+  geom_sf(data = gw_KS_sf, size = 0.4)
+```
+
+```{r}
+# Limit the geographic scope of the map
+ggplot() +
+  geom_sf(data = st_transform(KS_county, 32614)) +
+  geom_sf(data = gw_KS_sf, size = 0.4) +
+  coord_sf(crs = 4269) +
+  xlim(-99, -97) +
+  ylim(37, 39)
+```
+
+```{r}
+# Faceting
+ggplot() +
+  geom_sf(data = st_transform(KS_county, 32614)) +
+  geom_sf(data = gw_KS_sf, aes(color = af_used)) +
+  facet_wrap(vars(year))
+```
+
+```{r}
+ggplot() +
+  geom_sf(data = st_transform(KS_county, 32614)) +
+  geom_sf(data = gw_KS_sf, aes(color = af_used)) +
+  facet_wrap(
+    vars(year),
+    ncol = 1
+  )
+```
+
+```{r}
+ggplot() +
+  geom_sf(data = st_transform(KS_county, 32614)) +
+  geom_sf(data = gw_KS_sf, aes(color = af_used)) +
+  facet_wrap((af_used > 200) ~ year) +
+  theme(panel.spacing.y = unit(1, "lines"))
+```
+
+```{r}
+# Adding texts (labels) on a map
+ggplot() +
+  geom_sf(data = KS_county) +
+  geom_sf_text(
+    data      = KS_county,
+    aes(label = NAME),
+    size      = 3,
+    color     = "blue"
+  )
+
+ggplot() +
+  geom_sf(data = KS_county) +
+  geom_sf_text(
+    data          = KS_county,
+    aes(label     = NAME),
+    check_overlap = TRUE,
+    size          = 3,
+    color         = "blue"
+  )
+
+ggplot() +
+  geom_sf(data = KS_county) +
+  geom_sf_text(
+    data          = KS_county,
+    aes(label     = NAME),
+    check_overlap = TRUE,
+    size          = 3,
+    color         = "blue",
+    nudge_x       = -0.1,
+    nudge_y       = 0.1
+  )
+```
+
+```{r}
+# Individually
+Cheyenne <- KS_county %>% 
+  filter(NAME == "Cheyenne")
+
+KS_less_Cheyenne <- KS_county %>% 
+  filter(NAME != "Cheyenne")
+
+ggplot() +
+  geom_sf(data = KS_county) +
+  geom_sf_text(
+    data          = KS_less_Cheyenne,
+    aes(label     = NAME),
+    check_overlap = TRUE,
+    size          = 3,
+    color         = "blue",
+    nudge_x       = -0.1,
+    nudge_y       = 0.1
+  ) +
+  geom_sf_text(
+    data          = Cheyenne,
+    aes(label     = NAME),
+    size          = 2.5,
+    color         = "red",
+    nudge_y       = 0.2
+  )
+
+# With annotate()
+ggplot() +
+  geom_sf(data = KS_county) +
+  geom_sf_text(
+    data          = KS_less_Cheyenne,
+    aes(label     = NAME),
+    check_overlap = TRUE,
+    size          = 3,
+    color         = "blue",
+    nudge_x       = -0.1,
+    nudge_y       = 0.1
+  ) +
+  #--- use annotate to add texts on the map ---#
+  annotate(
+    geom  = "text",
+    x     = -102,
+    y     = 39.8,
+    size  = 3,
+    label = "Cheyennes",
+    color = "red"
+  )
+```
+
+#### 3.7.3.2 Arranging maps
+
+```{r}
+# Inset
+three_counties <- KS_county %>% 
+  filter(
+    NAME %in% c("Cheyenne", "Sherman", "Wallace")
+  )
+
+g_three_counties <- three_counties %>% 
+  ggplot() +
+  geom_sf() +
+  geom_sf_text(aes(label = NAME)) +
+  theme_void()
+
+g_three_counties
+```
+
+```{r}
+# Convert the ggplot into a grob
+grob_aoi <- ggplotGrob(g_three_counties)
+
+# Check the class
+class(grob_aoi)
+
+# Create a map of Kansas
+g_region <- ggplot() +
+  geom_sf(data = KS_county) +
+  geom_sf(
+    data  = three_counties,
+    fill  = "blue",
+    color = "red",
+    alpha = 0.5) +
+  theme_void()
+
+# Convert to a grob
+grob_region <- ggplotGrob(g_region)
+
+g_inset <- ggplot() +
+  coord_equal(
+    xlim   = c(0, 1),
+    ylim   = c(0, 1),
+    expand = FALSE
+  )
+
+g_inset
+```
+
+```{r}
+g_aoi <- g_inset +
+  annotation_custom(
+    grob_aoi,
+    xmin = 0,
+    xmax = 0.8,
+    ymin = 0,
+    ymax = 1
+  )
+
+g_aoi
+
+g_region <- g_aoi +
+  annotation_custom(
+    grob_region,
+    xmin = 0.6,
+    xmax = 1,
+    ymin = 0,
+    ymax = 0.3
+  )
+
+g_region
+```
+
+```{r}
+# Without border
+g_region +
+  theme_void()
+```
+
+#### 3.7.3.3 Fine-tuning maps for publication
+
+```{r}
+gw_by_county <- st_join(
+  KS_county,
+  gw_KS_sf
+) %>%
+  as_tibble() %>%
+  with_groups(
+    c(COUNTYFP, year),
+    summarize,
+    af_used = sum(af_used, na.rm = TRUE)
+  ) %>% 
+  left_join(KS_county, ., by = "COUNTYFP") %>%
+  filter(!is.na(year))
+
+gw_by_county
+```
+
+```{r}
+g_base <- gw_by_county %>% 
+  ggplot() +
+  geom_sf(aes(fill = af_used)) +
+    facet_wrap(vars(year))
+
+g_base
+```
+
+```{r}
+# Setting the theme
+g_base +
+  theme_void()
+
+theme_void()
+```
+
+```{r}
+g_base +
+  theme(axis.text = element_blank())
+```
+
+```{r}
+theme_for_map <-
+  theme(
+    axis.ticks       = element_blank(),
+    axis.text        = element_blank(),
+    axis.line        = element_blank(),
+    panel.border     = element_blank(),
+    panel.grid       = element_line(
+      color = "transparent"),
+    panel.background = element_blank(),
+    plot.background  = element_rect(
+      fill  = "transparent",
+      color = "transparent")
+  )
+
+g_base +
+  theme_for_map
+```
+
+```{r}
+theme_for_map_2 <- 
+  theme_void() +
+  theme(
+    strip.background = element_rect(
+      fill = "gray"
+    )
+  )
+
+g_base +
+  theme_for_map_2
+```
+
+```{r}
+p <- gw_by_county %>%
+  ggplot(aes(fill = af_used)) +
+  geom_sf() +
+  facet_grid(vars(year)) +
+  theme_bw()
+
+p
+
+p +
+  theme(
+    panel.grid = element_line(
+      color = "transparent"
+    )
+  )
+```
+
+```{r}
+g_legend <- gw_by_county %>% 
+  ggplot(aes(fill = af_used)) +
+  geom_sf() +
+  facet_wrap(vars(year)) +
+  theme_void()
+
+g_legend +
+  scale_fill_viridis_c() +
+  labs(
+    fill = "Groundwater pumping (acre-feet)"
+  ) +
+  theme(
+    legend.position   = "bottom",
+    legend.key.height = unit(0.5, "cm"),
+    legend.key.width  = unit(2, "cm"),
+    legend.text       = element_text(
+      size   = 12,
+      family = "Times"
+    ),
+    legend.title      = element_text(
+      size   = 12,
+      family = "Times"
+    )
+  ) +
+  guides(
+    fill = guide_colorbar(title.position = "top")
+  )
+```
+
+### 3.7.4 Area Metadata
+
+```{r}
+mi_census <- midwest %>%
+  filter(state == "MI") %>%
+  # tolower -> str_to_lower
+  mutate(county = str_to_lower(county)) %>%
+  select(
+    county,
+    area,
+    poptotal,
+    percwhite,
+    percblack
+  )
+
+mi_census
+```
+
+```{r}
+census_counties <- mi_census %>% 
+  left_join(
+    mi_counties,
+    by = c("county" = "id")
+  )
+
+census_counties
+```
+
+```{r}
+p <- census_counties %>% 
+  ggplot(aes(lon, lat, group = county))
+  
+p +
+  geom_polygon(aes(fill = poptotal)) +
+  coord_quickmap()
+
+p +
+  geom_polygon(aes(fill = percwhite)) +
+  coord_quickmap()
+```
+
+## 3.8 Revealing Uncertainty
+
+```{r}
+y   <- c(18, 11, 16)
+tbl <- tibble(
+  x  = 1:3,
+  y  = y,
+  se = c(1.2, 0.5, 1.0)
+)
+
+base <- tbl %>% 
+  ggplot(aes(x, y, ymin = y - se, ymax = y + se))
+
+# Added the titles, so it's easier to remember which one you're looking at
+base +
+  geom_crossbar() +
+  labs(title = "geom_crossbar")
+
+base +
+  geom_pointrange() +
+  labs(title = "geom_pointrange")
+
+base +
+  geom_smooth(stat = "identity") +
+  labs(title = "geom_smooth")
+  
+base +
+  geom_errorbar() +
+  labs(title = "geom_errorbar")
+
+base +
+  geom_linerange() +
+  labs(title = "geom_linerange")
+
+base +
+  geom_ribbon() +
+  labs(title = "geom_ribbon")
+```
+
+## 3.9 Weighted Data
+
+```{r}
+# Unweighted
+p <- midwest %>%
+  ggplot(aes(percwhite, percbelowpoverty))
+
+p +
+  geom_point()
+
+# Weight by population
+p + 
+  geom_point(aes(size = poptotal / 1e6)) + 
+  scale_size_area(
+    "Population\n(millions)",
+    breaks = c(0.5, 1, 2, 4)
+  )
+```
+
+```{r}
+# Unweighted
+p +
+  geom_point() + 
+  geom_smooth(method = lm, linewidth = 1)
+
+# Weighted by population
+p + 
+  geom_point(aes(size = poptotal / 1e6)) + 
+  geom_smooth(
+    aes(weight = poptotal),
+    method = lm,
+    linewidth = 1
+  ) +
+  scale_size_area(guide = "none")
+```
+
+```{r}
+midwest %>%
+  ggplot(aes(percbelowpoverty)) +
+  geom_histogram(binwidth = 1) + 
+  labs(y = "Counties")
+
+midwest %>% 
+  ggplot(aes(percbelowpoverty)) +
+  geom_histogram(
+    aes(weight = poptotal),
+    binwidth = 1
+  ) +
+  labs(y = "Population (1000s)")
+```
+
+## 3.10 Diamonds Data
+
+```{r}
+diamonds
+```
+
+## 3.11 Displaying Distributions
+
+```{r}
+p <- diamonds %>%
+  ggplot(aes(depth))
+
+p + 
+  geom_histogram()
+
+p +
+  geom_histogram(binwidth = 0.1) + 
+  xlim(55, 70)
+```
+
+```{r}
+p <- diamonds %>%
+  ggplot(aes(depth))
+
+p + 
+  geom_freqpoly(
+    aes(color = cut),
+    binwidth   = 0.1,
+    na.rm      = TRUE
+  ) +
+  xlim(58, 68) + 
+  theme(legend.position = "none")
+
+p + 
+  geom_histogram(
+    aes(fill = cut),
+    binwidth = 0.1,
+    position = "fill",
+    na.rm    = TRUE
+  ) +
+  xlim(58, 68) + 
+  theme(legend.position = "none")
+```
+
+```{r}
+diamonds %>%
+  ggplot(aes(depth)) +
+  geom_density(na.rm = TRUE) +
+  xlim(58, 68) +
+  theme(legend.position = "none")
+
+diamonds %>%
+  ggplot(aes(depth, fill = cut, color = cut)) +
+  geom_density(alpha = 0.2, na.rm = TRUE) +
+  xlim(58, 68) +
+  theme(legend.position = "none")
+```
+
+```{r}
+diamonds %>%
+  ggplot(aes(clarity, depth)) +
+  geom_boxplot()
+
+diamonds %>%
+  ggplot(aes(carat, depth)) +
+  geom_boxplot(aes(group = cut_width(carat, 0.1))) +
+  xlim(NA, 2.05)
+```
+
+```{r}
+diamonds %>%
+  ggplot(aes(clarity, depth)) + 
+  geom_violin()
+
+diamonds %>%
+  ggplot(aes(carat, depth)) + 
+  geom_violin(aes(group = cut_width(carat, 0.1))) + 
+  xlim(NA, 2.05)
+```
+
+### 3.11.1 Exercises
+
+1.
+```{r}
+diamonds %>% 
+  ggplot(aes(carat)) +
+  geom_histogram(binwidth = 0.2)
+```
+
+2.
+```{r}
+p <- diamonds %>% 
+  ggplot(aes(price))
+
+p +
+  geom_histogram(binwidth = 100)
+
+p +
+  geom_histogram(binwidth = 500)
+```
+
+3.
+```{r}
+diamonds %>% 
+  ggplot(aes(clarity, price)) +
+  geom_boxplot()
+```
+
+4. 
+```{r}
+diamonds %>% 
+  count(depth) %>% 
+  mutate(
+    sum     = sum(n),
+    density = n / sum
+  ) %>% 
+  ggplot(aes(depth, density)) +
+  geom_line()
+```
+
+## 3.12 Dealing with Overplotting
+
+```{r}
+tbl <- tibble(x = rnorm(2000), y = rnorm(2000))
+
+norm <- tbl %>% 
+  ggplot(aes(x, y)) +
+  labs(
+    x = NULL,
+    y = NULL
+  )
+
+# Added the titles, so it's easier to remember which one you're looking at
+
+norm +
+  geom_point()
+
+# Hollow circles
+norm +
+  geom_point(shape = 1) +
+  labs(title = "shape = 1")
+
+# Pixel sized
+norm +
+  geom_point(shape = ".") +
+  labs(title = 'shape = "."')
+
+norm +
+  geom_point(alpha = 1 / 3) +
+  labs(title = "alpha = 1 / 3")
+
+norm +
+  geom_point(alpha = 1 / 5) +
+  labs(title = "alpha = 1 / 5")
+
+norm +
+  geom_point(alpha = 1 / 10) +
+  labs(title = "alpha = 1 / 10")
+
+```
+
+```{r}
+norm +
+  geom_bin2d()
+
+norm +
+  geom_bin2d(bins = 10)
+```
+
+```{r}
+norm +
+  geom_hex()
+
+norm +
+  geom_hex(bins = 10)
+```
+
+## 3.13. Statistical Summaries
+
+```{r}
+diamonds %>%
+  ggplot(aes(color)) + 
+  geom_bar()
+
+diamonds %>%
+  ggplot(aes(color, price)) + 
+  geom_bar(stat = "summary_bin", fun = mean)
+```
+
+```{r}
+diamonds %>%
+  ggplot(aes(table, depth)) + 
+  geom_bin2d(binwidth = 1, na.rm = TRUE) + 
+  xlim(50, 70) + 
+  ylim(50, 70)
+
+diamonds %>%
+  ggplot(aes(table, depth, z = price)) + 
+  geom_raster(
+    binwidth = 1,
+    stat = "summary_2d",
+    fun = mean, 
+    na.rm = TRUE
+  ) + 
+  xlim(50, 70) + 
+  ylim(50, 70)
+
+diamonds %>%
+  ggplot(aes(table, depth, z = price)) + 
+  geom_tile(
+    binwidth = 1,
+    stat = "summary_2d",
+    fun = mean, 
+    na.rm = TRUE
+  ) + 
+  xlim(50, 70) + 
+  ylim(50, 70)
+```
+
+## 3.X
+
+### rgl - 3D visualization device system for R using OpenGL
+
+https://dmurdoch.github.io/rgl/
+
+```{r}
+library(rgl)
+
+with(
+  iris,
+  plot3d(
+    Sepal.Length,
+    Sepal.Width,
+    Petal.Length, 
+    type = "s",
+    col  = as.numeric(Species)
+  )
+)
+```
+
+```{r}
+close3d()
+```
+
+```{r}
+library(rgl)
+library(MASS)
+
+set.seed(123)
+x   <- rgamma(100, shape = 5, rate = 0.1)
+fit <- fitdistr(x, dgamma, list(shape = 1, rate = 0.1), lower = 0.001)
+
+loglik <- function(shape, rate) {
+  sum(dgamma(x, shape = shape, rate = rate, log = TRUE)) 
+}
+
+loglik <- Vectorize(loglik)
+xlim <- fit$estimate[1] + 4 * fit$sd[1] * c(-1,1)
+ylim <- fit$estimate[2] + 4 * fit$sd[2] * c(-1,1)
+mfrow3d(1, 2, sharedMouse = TRUE)
+persp3d(
+  loglik,
+  xlim = xlim,
+  ylim = ylim,
+  n = 30
+)
+zlim <- fit$loglik + c(-qchisq(0.99, 2)/2, 0)
+next3d()
+persp3d(
+  loglik, 
+  xlim = xlim,
+  ylim = ylim,
+  zlim = zlim,
+  n = 30
+)
+```
+
+```{r}
+close3d()
+```
+
+```{r}
+library(rgl)
+triangles3d(
+  cbind(
+    x = rnorm(9),
+    y = rnorm(9),
+    z = rnorm(9)
+  ),
+  col = "green"
+)
+decorate3d()
+bg3d("lightgray")
+aspect3d(1, 1, 1)
+```
+
+```{r}
+close3d()
+```
+
+### OpenStreetMap with Dr. Dominic Royé
+
+https://dominicroye.github.io/en/2018/accessing-openstreetmap-data-with-r/
+
+```{r}
+library(osmdata)
+library(sf)
+library(ggmap)
+
+# The first five features
+available_features() %>% 
+  head()
+
+# Amenities
+available_tags("amenity") %>% 
+  head()
+
+# Shops
+available_tags("shop") %>% 
+  head()
+```
+
+```{r}
+# Building the query
+q <- getbb("Madrid") %>%
+  opq() %>%
+  add_osm_feature("amenity", "cinema")
+
+# Query structure
+q %>% 
+str() 
+```
+
+```{r}
+cinema <- osmdata_sf(q)
+cinema
+```
+
+```{r}
+# Our background map
+mad_map <- get_map(
+  getbb("Madrid"),
+  maptype = "toner-background",
+  source  = "stamen"
+)
+
+# Final map
+mad_map %>%
+  ggmap() +
+  geom_sf(
+    data        = cinema$osm_points,
+    inherit.aes = FALSE,
+    color       = "#238443",
+    fill        = "#004529",
+    alpha       = .5,
+    size        = 4,
+    shape       = 21
+  ) +
+  labs(
+    x = "",
+    y = ""
+  )
+```
+
+```{r}
+# Bounding box for the Iberian Peninsula
+m <- c(-10, 30, 5, 46)
+
+# Building the query
+q <- m %>% 
+  opq(timeout = 25*100) %>%
+  add_osm_feature("name", "Mercadona") %>%
+  add_osm_feature("shop", "supermarket")
+
+# Query
+mercadona <- osmdata_sf(q)
+
+# Final map
+ggplot(mercadona$osm_points) +
+  geom_sf(
+    color = "#08519c",
+    fill  = "#08306b",
+    alpha = .5,
+    size  = 1,
+    shape = 21
+    ) +
+  theme_void()
+```

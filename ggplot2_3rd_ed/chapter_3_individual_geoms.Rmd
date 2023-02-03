@@ -1,0 +1,73 @@
+---
+title: "Wickham, Hadley - ggplot2: Elegant Graphics for Data Analysis, Chapter 3 - Individual geoms"
+author: "Original Code: Hadley Wickham | Modifications: Antti Rask"
+date: "2023-01-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 3 Individual geoms
+
+```{r}
+library(tidyverse)
+library(conflicted)
+  conflict_prefer("filter", "dplyr")
+  conflict_prefer("select", "dplyr")
+```
+
+## 3.1 Basic plot types
+
+```{r}
+tbl <- tibble(
+  x     = c(3, 1, 5), 
+  y     = c(2, 4, 6), 
+  label = c("a","b","c")
+)
+
+p <- tbl %>% 
+  ggplot(aes(x, y, label = label)) + 
+  # Hide axis label
+  labs(
+    x = NULL,
+    y = NULL
+  ) +
+  # Shrink plot title
+  theme(plot.title = element_text(size = 12))
+
+p +
+  geom_point() +
+  ggtitle("point")
+
+p +
+  geom_text() +
+  ggtitle("text")
+
+p +
+  geom_bar(stat = "identity") +
+  ggtitle("bar")
+
+p +
+  geom_tile() +
+  ggtitle("raster")
+```
+
+```{r}
+p +
+  geom_line() +
+  ggtitle("line")
+
+p +
+  geom_area() +
+  ggtitle("area")
+
+p +
+  geom_path() +
+  ggtitle("path")
+
+p +
+  geom_polygon() +
+  ggtitle("polygon")
+```
