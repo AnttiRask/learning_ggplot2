@@ -269,7 +269,7 @@ p +
   )
 ```
 
-## 2.6 Plot Geoms
+## 2.6 Plot geoms
 
 ### 2.6.1 Adding a smoother to a plot
 
