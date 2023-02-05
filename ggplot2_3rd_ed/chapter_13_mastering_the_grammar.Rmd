@@ -1,0 +1,59 @@
+---
+title: "Wickham, Hadley - ggplot2: Elegant Graphics for Data Analysis, Chapter 13 - Mastering the grammar"
+author: "Original Code: Hadley Wickham | Modifications: Antti Rask"
+date: "2023-01-13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 13 Mastering the grammar
+
+```{r}
+library(tidyverse)
+library(conflicted)
+  conflict_prefer("filter", "dplyr")
+  conflict_prefer("select", "dplyr")
+```
+
+## 13.2 Building a scatterplot
+
+```{r}
+mpg %>%
+    ggplot(aes(displ, hwy, color = factor(cyl))) +
+    geom_point()
+```
+
+### 13.2.1 Mapping aesthetics to data
+
+```{r}
+p <- mpg %>%
+  ggplot(aes(displ, hwy, color = factor(cyl)))
+
+# Don't do this!
+p +
+  geom_line() + 
+  theme(legend.position = "none")
+
+# Or this!
+p +
+  geom_bar(stat = "identity", position = "identity", fill = NA) + 
+  theme(legend.position = "none")
+
+# This works
+p +
+  geom_point() + 
+  geom_smooth(method = "lm")
+```
+
+## 13.3 Adding Complexity
+
+```{r}
+mpg %>%
+    ggplot(aes(displ, hwy)) + 
+    geom_point() +
+    geom_smooth() + 
+    facet_wrap(vars(year))
+```

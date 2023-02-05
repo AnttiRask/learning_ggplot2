@@ -1,0 +1,219 @@
+---
+title: "Wickham, Hadley - ggplot2: Elegant Graphics for Data Analysis, Chapter 4 - Collective geoms"
+author: "Original Code: Hadley Wickham | Modifications: Antti Rask"
+date: "2023-01-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 4 Collective geoms
+
+```{r}
+library(tidyverse)
+library(conflicted)
+  conflict_prefer("filter", "dplyr")
+  conflict_prefer("select", "dplyr")
+```
+
+```{r}
+library(nlme)
+
+oxboys <- Oxboys
+
+head(oxboys)
+```
+
+### 4.1 Multiple groups, one aesthetic
+
+```{r}
+oxboys %>%
+  ggplot(aes(age, height, group = Subject)) + 
+  geom_point() + 
+  geom_line()
+```
+
+```{r}
+# Don't do this!
+oxboys %>%
+ggplot(aes(age, height)) + 
+  geom_point() + 
+  geom_line()
+```
+
+### 4.2 Different groups on different layers
+
+```{r}
+# Don't do this!
+oxboys %>% 
+  ggplot(aes(age, height, group = Subject)) + 
+  geom_line() + 
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+```{r}
+oxboys %>%
+  ggplot(aes(age, height)) + 
+  geom_line(aes(group = Subject)) + 
+  geom_smooth(
+    method    = "lm",
+    linewidth = 2,
+    se        = FALSE
+  )
+```
+
+### 4.3 Overriding the default grouping
+
+```{r}
+p <- oxboys %>%
+  ggplot(aes(Occasion, height)) + 
+  geom_boxplot()
+
+p
+
+# Don't do this!
+p +
+  geom_line(color = "#3366FF", alpha = 0.5)
+
+# This works
+p +
+  geom_line(
+    aes(group = Subject),
+    color     = "#3366FF",
+    alpha     = 0.5
+  )
+```
+
+### 4.4 Matching aesthetics to graphic objects
+
+```{r}
+tbl <- tibble(x = 1:3, y = 1:3, color = c(1,3,5))
+
+# 1
+tbl %>%
+  ggplot(aes(x, y, color = factor(color))) + 
+  geom_line(aes(group = 1), linewidth = 2) +
+  geom_point(size = 5)
+
+# 2
+tbl %>%
+  ggplot(aes(x, y, color = color)) + 
+  geom_line(aes(group = 1), linewidth = 2) +
+  geom_point(size = 5)
+
+# 3
+xgrid <- with(
+  tbl,
+  seq(min(x), max(x), length = 50)
+)
+
+interpolation <- tibble(
+  x = xgrid,
+  y = approx(
+    x    = tbl$x,
+    y    = tbl$y,
+    xout = xgrid)$y,
+  color = approx(
+    tbl$x,
+    tbl$color,
+    xout = xgrid)$y
+)
+
+interpolation %>%
+  ggplot(aes(x, y, color = color)) + 
+  geom_line(linewidth = 2) +
+  geom_point(data = tbl, size = 5)
+```
+
+```{r}
+mpg %>%
+  ggplot(aes(class)) + 
+  geom_bar()
+
+mpg %>% 
+  ggplot(aes(class, fill = drv)) + 
+  geom_bar()
+```
+
+```{r}
+# Don't do this!
+mpg %>% 
+  ggplot(aes(class, fill = hwy)) + 
+  geom_bar()
+
+mpg %>%
+  ggplot(aes(class, fill = hwy, group = hwy)) + 
+  geom_bar()
+```
+
+### 4.5 Exercises
+
+1.
+```{r}
+mpg %>% 
+  ggplot(aes(cyl, hwy, group = cyl)) +
+  geom_boxplot()
+```
+
+2.
+```{r}
+mpg %>%
+  ggplot(aes(displ, cty, group = as.integer(displ))) + 
+  geom_boxplot()
+```
+
+3.
+```{r}
+tbl <- tibble(x = 1:3, y = 1:3, color = c(1,3,5))
+
+# Group = 1
+ggplot(tbl, aes(x, y, color = factor(color))) + 
+  geom_line(aes(group = 1), linewidth = 2) +
+  geom_point(size = 5) +
+  labs(title = "Group = 1")
+
+# Group = 1 omitted
+ggplot(tbl, aes(x, y, color = factor(color))) + 
+  geom_line(linewidth = 2) +
+  geom_point(size = 5) +
+  labs(title = "Group = 1 omitted")
+
+# Group = 2
+ggplot(tbl, aes(x, y, color = factor(color))) + 
+  geom_line(aes(group = 2), linewidth = 2) +
+  geom_point(size = 5) +
+  labs(title = "Group = 2")
+```
+
+4.
+```{r}
+mpg %>%
+  ggplot(aes(drv)) + 
+  geom_bar(color = "white")
+
+mpg %>%
+  ggplot(aes(drv, fill = hwy, group = hwy)) + 
+  geom_bar(color = "white")
+
+mpg2 <- mpg %>%
+  arrange(hwy) %>%
+  mutate(id = seq_along(hwy))
+
+mpg2 %>% 
+  ggplot(aes(drv, fill = hwy, group = id)) + 
+  geom_bar(color = "white")
+```
+
+5.
+```{r}
+library(babynames)
+
+hadley <- babynames %>% 
+  filter(name == "Hadley")
+
+hadley %>%
+  ggplot(aes(year, n, group = sex, color = sex)) + 
+  geom_line()
+```
