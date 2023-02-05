@@ -1,5 +1,5 @@
 ---
-title: "Wickham, Hadley - ggplot2: Elegant Graphics for Data Analysis, Chapter 2: Getting Started with ggplot2"
+title: "Wickham, Hadley - ggplot2: Elegant Graphics for Data Analysis (2nd ed.), Chapter 2: Getting Started with ggplot2"
 author: "Original Code: Hadley Wickham (except Matt Dancho for ggdist and tidyquant) | Modifications: Antti Rask"
 date: "2023-01-05"
 output: html_document

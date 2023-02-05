@@ -1,5 +1,5 @@
 ---
-title: "Wickham, Hadley - ggplot2: Elegant Graphics for Data Analysis, Chapter 4 - Collective geoms"
+title: "Wickham, Hadley - ggplot2: Elegant Graphics for Data Analysis (3rd ed.), Chapter 4 - Collective geoms"
 author: "Original Code: Hadley Wickham | Modifications: Antti Rask"
 date: "2023-01-12"
 output: html_document
