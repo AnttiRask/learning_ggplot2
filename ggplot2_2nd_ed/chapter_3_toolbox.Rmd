@@ -310,14 +310,17 @@ diamonds %>%
 ## 3.5 Collective Geoms
 
 ```{r}
-data(Oxboys, package = "nlme")
-head(Oxboys)
+library(nlme)
+
+oxboys <- Oxboys
+
+head(oxboys)
 ```
 
 ### 3.5.1 Multiple Groups, One Aesthetic
 
 ```{r}
-Oxboys %>%
+oxboys %>%
   ggplot(aes(age, height, group = Subject)) + 
   geom_point() + 
   geom_line()
@@ -325,7 +328,7 @@ Oxboys %>%
 
 ```{r}
 # Don't do this!
-Oxboys %>%
+oxboys %>%
 ggplot(aes(age, height)) + 
   geom_point() + 
   geom_line()
@@ -335,14 +338,14 @@ ggplot(aes(age, height)) +
 
 ```{r}
 # Don't do this!
-Oxboys %>% 
+oxboys %>% 
   ggplot(aes(age, height, group = Subject)) + 
   geom_line() + 
   geom_smooth(method = "lm", se = FALSE)
 ```
 
 ```{r}
-Oxboys %>%
+oxboys %>%
   ggplot(aes(age, height)) + 
   geom_line(aes(group = Subject)) + 
   geom_smooth(
@@ -355,7 +358,7 @@ Oxboys %>%
 ### 3.5.3 Overriding the Default Grouping
 
 ```{r}
-p <- Oxboys %>%
+p <- oxboys %>%
   ggplot(aes(Occasion, height)) + 
   geom_boxplot()
 
@@ -365,6 +368,7 @@ p
 p +
   geom_line(color = "#3366FF", alpha = 0.5)
 
+# This works
 p +
   geom_line(
     aes(group = Subject),
