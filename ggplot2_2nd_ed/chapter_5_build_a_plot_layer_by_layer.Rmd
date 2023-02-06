@@ -1,0 +1,403 @@
+---
+title: "Wickham, Hadley - ggplot2: Elegant Graphics for Data Analysis (2nd ed.), Chapter 5 - Build a Plot Layer by Layer"
+author: "Original Code: Hadley Wickham | Modifications: Antti Rask"
+date: "2023-01-15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 5 Build a Plot Layer by Layer
+
+```{r}
+library(tidyverse)
+library(conflicted)
+  conflict_prefer("filter", "dplyr")
+  conflict_prefer("select", "dplyr")
+```
+
+## 5.2 Building a Plot
+
+```{r}
+p <- mpg %>% 
+  ggplot(aes(displ, hwy))
+
+p
+```
+
+```{r}
+p +
+  geom_point()
+
+p + 
+  layer(
+    mapping  = NULL, 
+    data     = NULL,
+    geom     = "point", 
+    stat     = "identity",
+    position = "identity"
+)
+```
+
+## 5.3 Data
+
+```{r}
+mod <- 
+  loess(hwy ~ displ, data = mpg)
+
+grid <- 
+  tibble(
+    displ = seq(
+      min(mpg$displ),
+      max(mpg$displ),
+      length = 50)
+  )
+
+grid$hwy <- 
+  predict(
+    mod,
+    newdata = grid
+  )
+
+grid
+
+mod
+```
+
+```{r}
+std_resid <- resid(mod) / mod$s
+
+outlier <- mpg %>%
+  filter(abs(std_resid) > 2)
+
+outlier
+```
+
+```{r}
+mpg %>%
+  ggplot(aes(displ, hwy)) + 
+  geom_point() + 
+  geom_line(
+    data      = grid,
+    color     = "blue",
+    linewidth = 1.5
+  ) + 
+  geom_text(data = outlier, aes(label = model))
+
+# Don't do this!
+ggplot(mapping = aes(displ, hwy)) + 
+  geom_point(data = mpg) + 
+  geom_line(
+    data      = grid,
+    color     = "blue",
+    linewidth = 1.5
+  ) + 
+  geom_text(data = outlier, aes(label = model))
+```
+
+### 5.3.1 Exercises
+
+2.
+```{r}
+class <- mpg %>% 
+  group_by(class) %>% 
+  summarise(
+    n = n(),
+    hwy = mean(hwy)
+  )
+
+mpg %>%
+  ggplot(aes(class, hwy)) +
+  geom_jitter(width = 0.2) +
+  geom_point(
+    data  = class,
+    size  = 5,
+    color = "red" 
+  ) +
+  geom_text(
+    data  = class,
+    aes(y = 10, label = str_c("n = ", n)),
+    size  = 3
+  )
+```
+
+## 5.4 Aesthetic Mappings
+
+```{r}
+aes(x = displ, y = hwy, color = class)
+
+aes(displ, hwy, color = class)
+```
+
+### 5.4.1 Specifying the Aesthetics in the Plot vs. in the Layers
+
+```{r}
+# All create the same plot specification
+mpg %>%
+  ggplot(aes(displ, hwy, color = class)) + 
+  geom_point()
+
+mpg %>%
+  ggplot(aes(displ, hwy)) + 
+  geom_point(aes(color = class))
+
+mpg %>%
+  ggplot(aes(displ)) + 
+  geom_point(aes(y = hwy, color = class))
+
+mpg %>%
+  ggplot() + 
+  geom_point(aes(displ, hwy, color = class))
+```
+
+```{r}
+mpg %>%
+  ggplot(aes(displ, hwy, color = class)) + 
+  geom_point() + 
+  geom_smooth(method = "lm", se = FALSE) +
+  theme(legend.position = "none")
+
+mpg %>%
+  ggplot(aes(displ, hwy)) + 
+  geom_point(aes(color = class)) + 
+  geom_smooth(method = "lm", se = FALSE) + 
+  theme(legend.position = "none")
+```
+
+### 5.4.2 Setting vs. Mapping
+
+```{r}
+p <- mpg %>%
+  ggplot(aes(cty, hwy))
+
+p +
+  geom_point(color = "darkblue")
+
+p + 
+  geom_point(aes(color = "darkblue"))
+
+# Override the default scale
+p +
+  geom_point(aes(color = "darkblue")) + 
+  scale_color_identity()
+```
+
+```{r}
+mpg %>%
+  ggplot(aes(displ, hwy)) + 
+  geom_point() +
+  geom_smooth(
+    aes(color = "loess"),
+    method    = "loess",
+    se        = FALSE
+  ) + 
+  geom_smooth(
+    aes(color = "lm"),
+    method    = "lm",
+    se        = FALSE) +
+  labs(color  = "Method")
+```
+
+### 5.4.3 Exercises
+
+1.
+```{r}
+mpg %>%
+  ggplot() + 
+  geom_point(aes(displ, hwy))
+
+mpg %>%
+  ggplot(aes(cty, hwy)) +
+  geom_point() +
+  geom_smooth()
+
+msleep %>%
+  mutate(
+    log_brainwt = log(brainwt),
+    log_bodywt  = log(bodywt)) %>%
+  ggplot(aes(log_brainwt, log_bodywt)) +
+  geom_point()
+```
+
+2.
+```{r}
+# Don't do this!
+ggplot(mpg) +
+  geom_point(aes(class, cty)) + 
+  geom_boxplot(aes(trans, hwy))
+```
+
+## 5.6 Stats
+
+```{r}
+p <- 
+  mpg %>%
+  ggplot(aes(trans, cty)) + 
+  geom_point()
+
+p +
+  stat_summary(
+    geom  = "point",
+    fun   = "mean",
+    color = "red",
+    size  = 4
+  )
+
+p + 
+  geom_point(
+    stat  = "summary",
+    fun   = "mean",
+    color = "red",
+    size  = 4
+  )
+```
+
+### 5.6.1 Generated Variables
+
+```{r}
+p <- diamonds %>%
+  ggplot(aes(price))
+
+p +
+  geom_histogram(binwidth = 500)
+
+p +
+  geom_histogram(
+    aes(y = after_stat(density)),
+    binwidth = 500
+  )
+```
+
+```{r}
+p <-
+diamonds %>%
+  ggplot(aes(price, color = cut))
+
+p +
+  geom_freqpoly(binwidth = 500) +
+  theme(legend.position = "none")
+
+p +
+  geom_freqpoly(
+    aes(y = after_stat(density)),
+    binwidth = 500
+  ) + 
+  theme(legend.position = "none")
+```
+
+### 5.6.2 Exercises
+
+1.
+```{r}
+mod <- loess(hwy ~ displ, data = mpg)
+
+smoothed <- tibble(displ = seq(1.6, 7, length = 50))
+
+pred <- predict(mod, newdata = smoothed, se = TRUE) 
+
+smoothed$hwy     <- pred$fit
+
+smoothed$hwy_lwr <- pred$fit - 1.96 * pred$se.fit
+
+smoothed$hwy_upr <- pred$fit + 1.96 * pred$se.fit
+
+smoothed
+
+mpg %>% 
+  ggplot(aes(displ, hwy)) +
+  geom_smooth()
+
+smoothed %>% 
+  ggplot(aes(displ, hwy)) +
+  geom_line(color = "blue", linewidth = 1) +
+  geom_ribbon(
+    aes(ymin = hwy_lwr, ymax = hwy_upr),
+    alpha = 0.2
+  )
+```
+
+3.
+```{r}
+mpg %>% 
+  ggplot(aes(drv, trans)) +
+  geom_count(aes(size = after_stat(prop), group = 1)) 
+```
+
+## 5.7. Position Adjustments
+
+```{r}
+dplot <- diamonds %>% 
+  ggplot(aes(color, fill = cut)) +
+  labs(
+    x = NULL,
+    y = NULL
+  ) +
+  theme(legend.position = "none")
+
+# Added the titles, so it's easier to remember which one you're looking at
+dplot +
+  geom_bar() +
+  labs(
+    title = "position_stack() (default for geom_bar())"
+  )
+
+dplot +
+  geom_bar(position = "fill") +
+  labs(
+    title = "position_fill()"
+  )
+
+dplot +
+  geom_bar(position = "dodge") +
+  labs(
+    title = "position_dodge()"
+  )
+```
+
+```{r}
+# Don't do this!
+dplot + 
+  geom_bar(
+    position = "identity",
+    alpha = 1 / 2,
+    color = "grey50"
+  )
+
+diamonds %>%
+  ggplot(aes(color, color = cut)) + 
+  geom_line(aes(group = cut), stat = "count") + 
+  labs(
+    x = NULL,
+    y = NULL
+  ) +
+  theme(legend.position = "none")
+```
+
+```{r}
+p <- mpg %>%
+  ggplot(aes(displ, hwy))
+
+p + 
+  geom_point(position = "jitter")
+
+p + 
+  geom_point(
+    position = position_jitter(
+      width = 0.05,
+      height = 0.5
+    )
+  )
+
+p +
+  geom_jitter(width = 0.05, height = 0.5)
+```
+
+
+
+
+
+
+
+

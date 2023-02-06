@@ -1,0 +1,447 @@
+---
+title: "Wickham, Hadley - ggplot2: Elegant Graphics for Data Analysis (3rd ed.), Chapter 5 - Statistical summaries"
+author: "Original Code: Hadley Wickham | Modifications: Antti Rask"
+date: "2023-01-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 5 Statistical summaries
+
+```{r}
+library(tidyverse)
+library(conflicted)
+  conflict_prefer("filter", "dplyr")
+  conflict_prefer("select", "dplyr")
+```
+
+## 5.1 Revealing uncertainty
+
+```{r}
+y   <- c(18, 11, 16)
+tbl <- tibble(
+  x  = 1:3,
+  y  = y,
+  se = c(1.2, 0.5, 1.0)
+)
+
+base <- tbl %>% 
+  ggplot(aes(x, y, ymin = y - se, ymax = y + se))
+
+# Added the titles, so it's easier to remember which one you're looking at
+base +
+  geom_crossbar() +
+  labs(title = "geom_crossbar")
+
+base +
+  geom_pointrange() +
+  labs(title = "geom_pointrange")
+
+base +
+  geom_smooth(stat = "identity") +
+  labs(title = "geom_smooth")
+  
+base +
+  geom_errorbar() +
+  labs(title = "geom_errorbar")
+
+base +
+  geom_linerange() +
+  labs(title = "geom_linerange")
+
+base +
+  geom_ribbon() +
+  labs(title = "geom_ribbon")
+```
+
+## 5.2 Weighted data
+
+```{r}
+# Unweighted
+p <- midwest %>%
+  ggplot(aes(percwhite, percbelowpoverty))
+
+p +
+  geom_point()
+
+# Weight by population
+p + 
+  geom_point(aes(size = poptotal / 1e6)) + 
+  scale_size_area(
+    "Population\n(millions)",
+    breaks = c(0.5, 1, 2, 4)
+  )
+```
+
+```{r}
+# Unweighted
+p +
+  geom_point() + 
+  geom_smooth(method = lm, linewidth = 1)
+
+# Weighted by population
+p + 
+  geom_point(aes(size = poptotal / 1e6)) + 
+  geom_smooth(
+    aes(weight = poptotal),
+    method = lm,
+    linewidth = 1
+  ) +
+  scale_size_area(guide = "none")
+```
+
+```{r}
+p <- midwest %>%
+  ggplot(aes(percbelowpoverty))
+
+p +
+  geom_histogram(binwidth = 1) + 
+  labs(y = "Counties")
+
+p +
+  geom_histogram(
+    aes(weight = poptotal),
+    binwidth = 1
+  ) +
+  labs(y = "Population (1000s)")
+```
+
+## 5.3 Diamonds data
+
+```{r}
+diamonds
+```
+
+## 5.4 Displaying distributions
+
+```{r}
+p <- diamonds %>%
+  ggplot(aes(depth))
+
+p + 
+  geom_histogram()
+
+p +
+  geom_histogram(binwidth = 0.1) + 
+  xlim(55, 70)
+```
+
+```{r}
+p <- diamonds %>%
+  ggplot(aes(depth))
+
+p + 
+  geom_freqpoly(
+    aes(color = cut),
+    binwidth   = 0.1,
+    na.rm      = TRUE
+  ) +
+  xlim(58, 68) + 
+  theme(legend.position = "none")
+
+p + 
+  geom_histogram(
+    aes(fill = cut),
+    binwidth = 0.1,
+    position = "fill",
+    na.rm    = TRUE
+  ) +
+  xlim(58, 68) + 
+  theme(legend.position = "none")
+```
+
+```{r}
+diamonds %>%
+  ggplot(aes(depth)) +
+  geom_density(na.rm = TRUE) +
+  xlim(58, 68) +
+  theme(legend.position = "none")
+
+diamonds %>%
+  ggplot(aes(depth, fill = cut, color = cut)) +
+  geom_density(alpha = 0.2, na.rm = TRUE) +
+  xlim(58, 68) +
+  theme(legend.position = "none")
+```
+
+```{r}
+diamonds %>%
+  ggplot(aes(clarity, depth)) +
+  geom_boxplot()
+
+diamonds %>%
+  ggplot(aes(carat, depth)) +
+  geom_boxplot(aes(group = cut_width(carat, 0.1))) +
+  xlim(NA, 2.05)
+```
+
+```{r}
+diamonds %>%
+  ggplot(aes(clarity, depth)) + 
+  geom_violin()
+
+diamonds %>%
+  ggplot(aes(carat, depth)) + 
+  geom_violin(aes(group = cut_width(carat, 0.1))) + 
+  xlim(NA, 2.05)
+```
+
+### 3.11.1 Exercises (5.4.1)
+
+1.
+```{r}
+diamonds %>% 
+  ggplot(aes(carat)) +
+  geom_histogram(binwidth = 0.2)
+```
+
+2.
+```{r}
+p <- diamonds %>% 
+  ggplot(aes(price))
+
+p +
+  geom_histogram(binwidth = 100)
+
+p +
+  geom_histogram(binwidth = 500)
+```
+
+3.
+```{r}
+diamonds %>% 
+  ggplot(aes(clarity, price)) +
+  geom_boxplot()
+```
+
+4. 
+```{r}
+diamonds %>% 
+  count(depth) %>% 
+  mutate(
+    sum     = sum(n),
+    density = n / sum
+  ) %>% 
+  ggplot(aes(depth, density)) +
+  geom_line()
+```
+
+## 5.5 Dealing with overplotting
+
+```{r}
+tbl <- tibble(x = rnorm(2000), y = rnorm(2000))
+
+norm <- tbl %>% 
+  ggplot(aes(x, y)) +
+  labs(
+    x = NULL,
+    y = NULL
+  )
+
+# Added the titles, so it's easier to remember which one you're looking at
+
+norm +
+  geom_point()
+
+# Hollow circles
+norm +
+  geom_point(shape = 1) +
+  labs(title = "shape = 1")
+
+# Pixel sized
+norm +
+  geom_point(shape = ".") +
+  labs(title = 'shape = "."')
+
+norm +
+  geom_point(alpha = 1 / 3) +
+  labs(title = "alpha = 1 / 3")
+
+norm +
+  geom_point(alpha = 1 / 5) +
+  labs(title = "alpha = 1 / 5")
+
+norm +
+  geom_point(alpha = 1 / 10) +
+  labs(title = "alpha = 1 / 10")
+
+```
+
+```{r}
+norm +
+  geom_bin2d()
+
+norm +
+  geom_bin2d(bins = 10)
+```
+
+```{r}
+norm +
+  geom_hex()
+
+norm +
+  geom_hex(bins = 10)
+```
+
+## 5.6 Statistical summaries
+
+```{r}
+diamonds %>%
+  ggplot(aes(color)) + 
+  geom_bar()
+
+diamonds %>%
+  ggplot(aes(color, price)) + 
+  geom_bar(stat = "summary_bin", fun = mean)
+```
+
+```{r}
+diamonds %>%
+  ggplot(aes(table, depth)) + 
+  geom_bin2d(binwidth = 1, na.rm = TRUE) + 
+  xlim(50, 70) + 
+  ylim(50, 70)
+
+diamonds %>%
+  ggplot(aes(table, depth, z = price)) + 
+  geom_raster(
+    binwidth = 1,
+    stat = "summary_2d",
+    fun = mean, 
+    na.rm = TRUE
+  ) + 
+  xlim(50, 70) + 
+  ylim(50, 70)
+
+diamonds %>%
+  ggplot(aes(table, depth, z = price)) + 
+  geom_tile(
+    binwidth = 1,
+    stat = "summary_2d",
+    fun = mean, 
+    na.rm = TRUE
+  ) + 
+  xlim(50, 70) + 
+  ylim(50, 70)
+```
+
+## 5.7 Surfaces
+
+```{r}
+faithfuld %>%
+  ggplot(aes(eruptions, waiting)) +
+  # ..level.. -> after_stat(level)
+  geom_contour(aes(z = density, color = after_stat(level)))
+```
+
+```{r}
+faithfuld %>%
+  ggplot(aes(eruptions, waiting)) + 
+  geom_raster(aes(fill = density))
+```
+
+```{r}
+# Bubble plots work better with fewer observations
+small <- faithfuld %>%
+  slice(seq(1, nrow(.), 10))
+small
+
+# Or alternatively
+small2 <- faithfuld %>%
+  slice(which(row_number() %% 10 == 1))
+small2
+
+# Or alternatively
+small3 <- faithfuld %>% 
+   filter(row_number() %% 10 == 1)
+small3
+
+small %>%
+  ggplot(aes(eruptions, waiting)) +
+  geom_point(aes(size = density), alpha = 1/3) +
+  scale_size_area()
+```
+
+## 5.X
+
+### rgl - 3D visualization device system for R using OpenGL
+
+https://dmurdoch.github.io/rgl/
+
+```{r}
+library(rgl)
+
+with(
+  iris,
+  plot3d(
+    Sepal.Length,
+    Sepal.Width,
+    Petal.Length, 
+    type = "s",
+    col  = as.numeric(Species)
+  )
+)
+```
+
+```{r}
+close3d()
+```
+
+```{r}
+library(rgl)
+library(MASS)
+
+set.seed(123)
+x   <- rgamma(100, shape = 5, rate = 0.1)
+fit <- fitdistr(x, dgamma, list(shape = 1, rate = 0.1), lower = 0.001)
+
+loglik <- function(shape, rate) {
+  sum(dgamma(x, shape = shape, rate = rate, log = TRUE)) 
+}
+
+loglik <- Vectorize(loglik)
+xlim <- fit$estimate[1] + 4 * fit$sd[1] * c(-1,1)
+ylim <- fit$estimate[2] + 4 * fit$sd[2] * c(-1,1)
+mfrow3d(1, 2, sharedMouse = TRUE)
+persp3d(
+  loglik,
+  xlim = xlim,
+  ylim = ylim,
+  n = 30
+)
+zlim <- fit$loglik + c(-qchisq(0.99, 2)/2, 0)
+next3d()
+persp3d(
+  loglik, 
+  xlim = xlim,
+  ylim = ylim,
+  zlim = zlim,
+  n = 30
+)
+```
+
+```{r}
+close3d()
+```
+
+```{r}
+library(rgl)
+triangles3d(
+  cbind(
+    x = rnorm(9),
+    y = rnorm(9),
+    z = rnorm(9)
+  ),
+  col = "green"
+)
+decorate3d()
+bg3d("lightgray")
+aspect3d(1, 1, 1)
+```
+
+```{r}
+close3d()
+```
