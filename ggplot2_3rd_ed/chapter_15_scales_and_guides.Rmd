@@ -1,0 +1,225 @@
+---
+title: "Wickham, Hadley - ggplot2: Elegant Graphics for Data Analysis (3rd ed.), Chapter 15 - Scales and Guides"
+author: "Original Code: Hadley Wickham | Modifications: Antti Rask"
+date: "2023-01-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 15 Scales and guides
+
+```{r}
+library(tidyverse)
+library(conflicted)
+  conflict_prefer("filter", "dplyr")
+  conflict_prefer("select", "dplyr")
+```
+
+## 15.1 Theory of scales and guides
+
+### 15.1.1 Scale specification
+
+```{r}
+p <- mpg %>%
+  ggplot(aes(displ, hwy)) +
+  geom_point(aes(color = class))
+
+p
+
+p +
+  scale_x_continuous() +
+  scale_y_continuous() +
+  scale_color_discrete()
+```
+
+```{r}
+p <- mpg %>%
+  ggplot(aes(displ, hwy))
+
+p +
+  geom_point(aes(color = class)) +
+  scale_x_continuous("A really awesome x axis") +
+  scale_y_continuous("An amazingly great y axis")
+
+# Don't do this!
+p +
+  geom_point() +
+  scale_x_continuous("Label 1") +
+  scale_x_continuous("Label 2")
+
+# Do this instead!
+p +
+  geom_point() +
+  scale_x_continuous("Label 2")
+
+p +
+  geom_point(aes(color = class)) +
+  scale_x_sqrt() +
+  scale_color_brewer()
+```
+
+## 15.4 Scale limits
+
+```{r}
+library(scales)
+
+tbl  <- tibble(x = 1:6, y = 8:13)
+
+base <- tbl %>% 
+  ggplot(aes(x, y, fill = x)) + 
+  # bar chart
+  geom_col() +
+  # for visual clarity only
+  geom_vline(xintercept = 3.5, color = "red") 
+
+base
+
+base + 
+  scale_fill_gradient(limits = c(1, 3))
+
+base +
+  scale_fill_gradient(
+    limits = c(1, 3),
+    oob    = squish
+  )
+```
+
+## 15.6 Scale transformation
+
+```{r}
+base <- faithfuld %>% 
+  ggplot(aes(waiting, eruptions)) + 
+  geom_raster(aes(fill = density)) + 
+  scale_x_continuous(NULL, NULL, expand = c(0, 0)) +
+  scale_y_continuous(NULL, NULL, expand = c(0, 0))
+  
+base
+
+base +
+  scale_fill_continuous(trans = "sqrt")
+```
+
+```{r}
+tbl <- tibble(
+  x = runif(20),
+  y = runif(20),
+  z = sample(20)
+)
+
+base <- tbl %>% 
+  ggplot(aes(x, y, size = z)) +
+  geom_point()
+
+base
+
+base + scale_size(trans = "reverse")
+```
+
+## 15.7 Legend merging and splitting
+
+### 15.7.1 Merging legends
+
+```{r}
+toy <- tibble(
+  const = 1,
+  up    = 1:4,
+  txt   = letters[1:4],
+  big   = (1:4) * 1000,
+  log   = c(2, 5, 10, 2000)
+)
+
+p <- toy %>%
+  ggplot(aes(up, up))
+  
+p +
+  geom_point(size = 4, color = "grey20") +
+  geom_point(aes(color = txt), size = 2)
+
+p +
+  geom_point(
+    size = 4, color = "grey20", show.legend = TRUE
+  ) +
+  geom_point(aes(color = txt), size = 2) 
+```
+
+```{r}
+base <- toy %>% 
+  ggplot(aes(const, up)) +
+  scale_x_continuous(NULL, breaks = NULL)
+
+base +
+  geom_point(aes(color = txt))
+
+base +
+  geom_point(aes(shape = txt))
+
+base + 
+  geom_point(aes(shape = txt, color = txt))
+```
+
+```{r}
+base <- toy %>%
+  ggplot(aes(const, up)) + 
+  geom_point(aes(shape = txt, color = txt)) + 
+  scale_x_continuous(NULL, breaks = NULL)
+
+base
+
+base +
+  labs(shape = "Split legend")
+
+base +
+  labs(
+    shape = "Merged legend",
+    color = "Merged legend"
+  )
+```
+
+### 15.7.2 Splitting legends
+
+```{r}
+library(ggnewscale)
+
+base <- mpg %>%
+  ggplot(aes(displ, hwy)) + 
+  geom_point(aes(color = factor(year)), size = 5) + 
+  scale_color_brewer(
+    "year",
+    type = "qual",
+    palette = 5
+  ) 
+
+base
+
+base + 
+  new_scale_color() + 
+  geom_point(
+    aes(color = cyl == 4),
+    size = 1,
+    fill = NA
+  ) + 
+  scale_color_manual(
+    "4 cylinder",
+    values = c("grey60", "black")
+  )
+```
+
+15.8 Legend key glyphs
+
+```{r}
+base <- economics %>% 
+  ggplot(aes(date, psavert, color = "savings"))
+
+base +
+  geom_line()
+
+base +
+  geom_line(key_glyph = "timeseries")
+
+# Alternatively
+base +
+  geom_line(key_glyph = draw_key_timeseries)
+```

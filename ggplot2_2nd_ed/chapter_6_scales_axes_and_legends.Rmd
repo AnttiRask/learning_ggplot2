@@ -1,0 +1,1026 @@
+---
+title: "Wickham, Hadley - ggplot2: Elegant Graphics for Data Analysis (2nd ed.), Chapter 6 - Scales, Axes and Legends"
+author: "Original Code: Hadley Wickham | Modifications: Antti Rask"
+date: "2023-01-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 6 Scales, Axes and Legends
+
+```{r}
+library(tidyverse)
+library(conflicted)
+  conflict_prefer("filter", "dplyr")
+  conflict_prefer("select", "dplyr")
+```
+
+## 6.2 Modifying Scales
+
+```{r}
+p <- mpg %>%
+  ggplot(aes(displ, hwy)) +
+  geom_point(aes(color = class))
+
+p
+
+p +
+  scale_x_continuous() +
+  scale_y_continuous() +
+  scale_color_discrete()
+```
+
+```{r}
+p <- mpg %>%
+  ggplot(aes(displ, hwy))
+
+p +
+  geom_point(aes(color = class)) +
+  scale_x_continuous("A really awesome x axis") +
+  scale_y_continuous("An amazingly great y axis")
+
+# Don't do this!
+p +
+  geom_point() +
+  scale_x_continuous("Label 1") +
+  scale_x_continuous("Label 2")
+
+# Do this instead!
+p +
+  geom_point() +
+  scale_x_continuous("Label 2")
+
+p +
+  geom_point(aes(color = class)) +
+  scale_x_sqrt() +
+  scale_color_brewer()
+```
+
+### 6.2.1 Exercises
+
+2.
+```{r}
+# Complicated:
+ggplot(mpg, aes(displ)) +
+  scale_y_continuous("Highway mpg") +
+  scale_x_continuous() +
+  geom_point(aes(y = hwy))
+
+# Simplified:
+mpg %>% 
+  ggplot(aes(displ, hwy)) +
+  geom_point() +
+  labs(y = "Highway mpg")
+
+# Complicated:
+ggplot(mpg, aes(y = displ, x = class)) +
+  scale_y_continuous("Displacement (l)") +
+  scale_x_discrete("Car type") +
+  scale_x_discrete("Type of car") +
+  scale_color_discrete() +
+  geom_point(aes(color = drv)) +
+  scale_color_discrete("Drive\ntrain")
+
+# Simplified:
+mpg %>%
+  ggplot(aes(class, displ, color = drv)) +
+  geom_point() +
+  labs(
+    x      = "Type of car",
+    y      = "Displacement (l)",
+    color  = "Drive\ntrain"
+  )
+```
+
+## 6.3 Guides: Legends and Axes
+
+### 6.3.1 Scale Title
+
+```{r}
+tbl <- tibble(x = 1:2, y = 1, z = "a")
+
+p <- tbl %>%
+  ggplot(aes(x, y)) +
+  geom_point()
+
+p +
+  scale_x_continuous("X axis")
+
+p +
+  scale_x_continuous(
+    quote(a + mathematical ^ expression)
+  )
+
+p +
+  labs(
+    x = quote(a + mathematical ^ expression)
+  )
+```
+
+```{r}
+p <- tbl %>% 
+  ggplot(aes(x, y, color = z)) +
+  geom_point()
+
+p +
+  xlab("X axis") +
+  ylab("Y axis")
+
+p +
+  labs(
+    x     = "X axis",
+    y     = "Y axis",
+    color = "Color\nlegend"
+  )
+```
+
+```{r}
+p <- tbl %>% 
+  ggplot(aes(x, y)) +
+  geom_point() +
+  theme(
+    plot.background = element_rect(color = "grey50")
+  )
+
+p +
+  labs(
+    x = "",
+    y = ""
+)
+
+p +
+  labs(
+    x = NULL,
+    y = NULL
+  )
+```
+
+### 6.3.2 Breaks and Labels
+
+```{r}
+tbl <- tibble(x = c(1, 3, 5) * 1000, y = 1)
+
+axs <- tbl %>% 
+  ggplot(aes(x,y)) +
+  geom_point() +
+  labs(
+    x = NULL,
+    y = NULL
+  )
+
+axs
+
+axs +
+  scale_x_continuous(breaks = c(2000, 4000))
+
+axs +
+  scale_x_continuous(
+    breaks = c(2000, 4000),
+    labels = c("2k", "4k")
+  )
+```
+
+```{r}
+leg <- tbl %>% 
+  ggplot(aes(y, x, fill = x)) +
+  geom_tile() +
+  labs(
+    x     = NULL,
+    y     = NULL
+  )
+
+leg +
+  labs(fill = NULL)
+
+leg +
+  scale_fill_continuous(breaks = c(2000, 4000)) +
+  labs(fill = NULL)
+
+leg +
+   scale_fill_continuous(
+    breaks = c(2000, 4000),
+    labels = c("2k", "4k")
+   ) +
+  labs(fill = NULL)
+```
+
+```{r}
+tbl2 <- tibble(x = 1:3, y = c("a", "b", "c"))
+
+p <- tbl2 %>% 
+  ggplot(aes(x, y)) +
+  geom_point()
+
+p
+
+p +
+  scale_y_discrete(
+    labels = c(
+      a = "apple",
+      b = "banana",
+      c = "carrot"
+    )
+  )
+```
+
+```{r}
+axs +
+  scale_x_continuous(breaks = NULL)
+
+axs +
+  scale_x_continuous(labels = NULL)
+```
+
+```{r}
+leg +
+  scale_fill_continuous(breaks = NULL)
+
+leg +
+  scale_fill_continuous(labels = NULL)
+```
+
+```{r}
+library(scales)
+
+axs +
+  scale_y_continuous(
+    labels = label_percent(accuracy = 1)
+  )
+
+axs +
+  scale_y_continuous(
+    labels = label_dollar()
+  )
+
+leg +
+  scale_fill_continuous(
+    labels = label_number(
+      scale  = 1e-3,
+      suffix = "k")
+  )
+```
+
+```{r}
+tbl <- tibble(x = c(2, 3, 5, 10, 200, 3000), y = 1)
+
+p <- tbl %>% 
+  ggplot(aes(x, y)) +
+  geom_point()
+
+p +
+  scale_x_log10()
+
+mb <- as.numeric(1:10 %o% 10 ^ (0:4))
+
+p +
+  scale_x_log10(minor_breaks = log10(mb))
+```
+
+### 6.3.3 Exercises
+
+1.
+```{r}
+library(scales)
+
+mpg %>% 
+  ggplot(aes(displ, hwy)) +
+  geom_point() +
+  scale_x_continuous(
+    "Displacement",
+    labels = label_number(suffix = "L")
+  ) +
+  scale_y_continuous(
+    quote(paste("Highway ", (frac(miles, gallon))))
+  )
+```
+
+## 6.4 Legends
+
+### 6.4.1 Layers and Legends
+
+```{r}
+tbl <- tibble(x = 1:3, y = 1:3, z = c("a", "b", "c"))
+
+tbl %>% 
+  ggplot(aes(x, y)) +
+  geom_point(size = 4, color = "grey20") +
+  geom_point(aes(color = z), size = 2)
+
+tbl %>% 
+  ggplot(aes(x, y)) +
+  geom_point(
+    size        = 4,
+    color       = "grey20",
+    show.legend = TRUE
+  ) +
+  geom_point(aes(color = z), size = 2)
+```
+
+```{r}
+norm <- tibble(x = rnorm(1000), y = rnorm(1000))
+
+norm$z <- cut(norm$x, 3, labels = c("a", "b", "c"))
+
+p <- norm %>% 
+  ggplot(aes(x, y)) +
+  geom_point(aes(color = z), alpha = 0.1)
+
+p
+
+p +
+  guides(
+    color = guide_legend(
+      override.aes = list(alpha = 1)
+    )
+  )
+```
+
+```{r}
+tbl %>% 
+  ggplot(aes(x, y)) +
+  geom_point(aes(color = z))
+
+tbl %>% 
+  ggplot(aes(x, y)) +
+  geom_point(aes(shape = z))
+
+tbl %>% 
+  ggplot(aes(x, y)) +
+  geom_point(aes(shape = z, color = z))
+```
+
+### 6.4.2 Legend Layout
+
+```{r}
+tbl <- tibble(x = 1:3, y = 1:3, z = c("a", "b", "c"))
+
+base <- tbl %>% 
+  ggplot(aes(x, y)) +
+  geom_point(aes(color = z), size = 3) +
+  labs(
+    x = NULL,
+    y = NULL
+  )
+
+# Added the titles, so it's easier to remember which one you're looking at
+base +
+  theme(legend.position = "right") + # the default
+  labs(
+    title = 'legend.position = "right" (the default)'
+  )
+
+base +
+  theme(legend.position = "bottom") +
+  labs(
+    title = 'legend.position = "bottom"'
+  )
+
+base +
+  theme(legend.position = "none") +
+  labs(
+    title = 'legend.position = "none"'
+  )
+
+base +
+  theme(
+    legend.position      = c(0, 1),
+    legend.justification = c(0, 1)
+  )
+
+base +
+  theme(
+    legend.position      = c(0.5, 0.5),
+    legend.justification = c(0.5, 0.5)
+  )
+
+base +
+  theme(
+    legend.position      = c(1, 0),
+    legend.justification = c(1, 0)
+  )
+
+base +
+  theme(
+    legend.position      = c(1, 0),
+    legend.justification = c(1, 0),
+    # legend.margin -> legend.spacing
+    legend.spacing       = unit(0, "mm")
+  )
+
+# legend.margin still exists, but behaves differently:
+base +
+  theme(
+    legend.position      = c(1, 0),
+    legend.justification = c(1, 0),
+    legend.margin        = margin(0, unit = "mm")
+  )
+```
+
+### 6.4.3 Guide Functions
+
+```{r}
+tbl <- tibble(x = 1, y = 1:3, z = 1:3)
+
+base <- tbl %>% 
+  ggplot(aes(x, y)) +
+  geom_raster(aes(fill = z))
+
+base
+
+base +
+  scale_fill_continuous(guide = guide_legend())
+
+base +
+  guides(fill = guide_legend())
+```
+
+#### 6.4.3.1 guide_legend()
+
+```{r}
+tbl <- tibble(x = 1, y = 1:4, z = letters[1:4])
+
+p <- tbl %>% 
+  ggplot(aes(x, y)) +
+  geom_raster(aes(fill = z))
+
+p
+
+p +
+  guides(fill = guide_legend(ncol = 2))
+
+p +
+  guides(fill = guide_legend(ncol = 2, byrow = TRUE))
+```
+
+```{r}
+p <- tbl %>% 
+  ggplot(aes(1, y)) +
+  geom_bar(stat = "identity", aes(fill = z))
+
+p
+
+p +
+  guides(fill = guide_legend(reverse = TRUE))
+```
+
+#### 6.4.3.2 guide_colorbar()
+
+```{r}
+tbl <- tibble(x = 1, y = 1:4, z = 1:4)
+
+p <- tbl %>% 
+  ggplot(aes(x, y)) +
+  geom_tile(aes(fill = z))
+
+p
+
+p +
+  guides(fill = guide_colorbar(reverse = TRUE))
+
+p +
+  guides(
+    fill = guide_colorbar(
+      barheight = unit(4, "cm")
+    )
+  )
+```
+
+### 6.4.4 Exercises
+
+1.
+```{r}
+tbl <- tibble(x = 1:3, y = 1:3, z = c("a", "b", "c"))
+
+base <- tbl %>% 
+  ggplot(aes(x, y)) +
+  geom_point(aes(color = z), size = 3) +
+  labs(
+    x = NULL,
+    y = NULL
+  )
+
+base +
+  theme(legend.position = "left") +
+  labs(
+    title = 'legend.position = "left"'
+  )
+```
+
+2.
+```{r}
+mpg %>% 
+  ggplot(aes(displ, hwy)) +
+  geom_point(aes(color = drv, shape = drv)) +
+  scale_color_discrete("Drive train")
+
+mpg %>% 
+  ggplot(
+    aes(
+      displ,
+      hwy,
+      color = drv,
+      shape = drv
+    )
+  ) +
+  geom_point() +
+  labs(
+    color = "Drive train",
+    shape = "Drive train"
+  )
+```
+3.
+```{r}
+mpg %>% 
+  ggplot(aes(displ, hwy, color = class)) +
+  geom_point(show.legend = FALSE) +
+  geom_smooth(
+    method = "lm",
+    se = FALSE
+  ) +
+  theme(legend.position = "bottom") +
+  guides(color = guide_legend(nrow = 1))
+```
+
+## 6.5 Limits
+
+```{r}
+tbl <- tibble(x = 1:3, y = 1:3)
+
+base <- tbl %>% 
+  ggplot(aes(x, y)) +
+  geom_point()
+
+base
+
+base +
+  scale_x_continuous(limits = c(1.5, 2.5))
+
+base +
+  scale_x_continuous(limits = c(0, 4))
+
+base +
+  xlim(0, 4)
+
+base +
+  xlim(4, 0)
+
+base +
+  lims(x = c(0, 4))
+```
+
+```{r}
+p <- faithfuld %>% 
+  ggplot(aes(waiting, eruptions)) +
+  geom_raster(aes(fill = density)) +
+  theme(legend.position = "none")
+
+p
+
+p +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0))
+```
+
+```{r}
+library(scales)
+
+tbl <- tibble(x = 1:5)
+
+p <- tbl %>% 
+  ggplot(aes(x, 1)) +
+  geom_tile(aes(fill = x), color = "white")
+
+p
+
+p +
+  scale_fill_gradient(limits = c(2, 4))
+
+p +
+  scale_fill_gradient(
+    limits = c(2, 4),
+    oob    = squish
+  )
+```
+
+### 6.5.1 Exercises
+
+1.
+```{r}
+fwd <- mpg %>% 
+  filter(drv == "f")
+
+rwd <- mpg %>% 
+  filter(drv == "r")
+
+fwd %>% 
+  ggplot(aes(displ, hwy, color = class)) +
+  geom_point() +
+  scale_x_continuous(
+    breaks = c(1, 3, 5, 7),
+    limits = c(1, 7)
+  ) +
+  scale_y_continuous(
+    breaks = c(15, 25, 35, 45),
+    limits = c(15, 45)
+  ) +
+  scale_color_discrete(
+    limits = c(
+      "2seater",
+      "compact",
+      "midsize",
+      "minivan",
+      "subcompact",
+      "suv"
+    )
+  )
+
+rwd %>% 
+  ggplot(aes(displ, hwy, color = class)) +
+  geom_point() +
+  scale_x_continuous(
+    breaks = c(1, 3, 5, 7),
+    limits = c(1, 7)
+  ) +
+  scale_y_continuous(
+    breaks = c(15, 25, 35, 45),
+    limits = c(15, 45)
+  ) +
+  scale_color_discrete(
+    limits = c(
+      "2seater",
+      "compact",
+      "midsize",
+      "minivan",
+      "subcompact",
+      "suv"
+    )
+  )
+```
+
+2.
+```{r}
+p <- mtcars %>%
+  ggplot(aes(mpg, wt)) +
+  geom_point()
+
+p
+
+p +
+  expand_limits(x = 0)
+
+p +
+  expand_limits(y = c(1, 9))
+
+p +
+  expand_limits(x = 0, y = 0)
+
+p2 <- mtcars %>%
+  ggplot(aes(mpg, wt))
+
+p2 + geom_point(aes(color = cyl)) +
+  expand_limits(color = seq(2, 10, by = 2))
+
+p2 +
+  geom_point(aes(color = factor(cyl))) +
+  expand_limits(color = factor(seq(2, 10, by = 2)))
+```
+
+## 6.6 Scales Toolbox
+
+### 6.6.1 Continuous Position Scales
+
+```{r}
+# Convert from fuel economy to fuel consumption
+mpg %>% 
+  ggplot(aes(displ, hwy)) +
+  geom_point() +
+  scale_y_continuous(trans = "reciprocal")
+
+# Log transform x and y axes
+diamonds %>% 
+  ggplot(aes(price, carat)) +
+  geom_bin2d() +
+  scale_x_continuous(trans = "log10") +
+  scale_y_continuous(trans = "log10")
+```
+
+```{r}
+library(lubridate)
+
+base <- economics %>% 
+  ggplot(aes(date, psavert)) +
+  geom_line(na.rm = TRUE) +
+  labs(
+    x = NULL,
+    y = NULL
+  )
+
+base # Default breaks and labels
+
+base +
+  scale_x_date(
+    date_labels = "%y",
+    date_breaks = "5 years"
+  )
+
+Sys.setlocale(category = "LC_ALL", locale = "us")
+
+base +
+  scale_x_date(
+    limits            = ymd(
+      c("2004-01-01", "2005-01-01")
+    ),
+    date_labels       = "%b %y",
+    date_minor_breaks = "1 month"
+  )
+
+base +
+  scale_x_date(
+    limits            = ymd(
+      c("2004-01-01", "2004-06-01")
+    ),
+    date_labels       = "%m/%d",
+    date_minor_breaks = "2 weeks"
+  )
+```
+
+### 6.6.2 Color
+
+#### 6.6.2.1 Continuous
+
+```{r}
+library(munsell)
+
+erupt <- faithfuld %>%
+  ggplot(aes(waiting, eruptions, fill = density)) +
+  geom_raster() +
+  scale_x_continuous(NULL, expand = c(0, 0)) +
+  scale_y_continuous(NULL, expand = c(0, 0)) +
+  theme(legend.position = "none")
+
+erupt
+
+erupt +
+  scale_fill_gradient(low = "white", high = "black")
+
+erupt +
+  scale_fill_gradient(
+    low  = mnsl("5G 9/2"),
+    high = mnsl("5G 6/8")
+  )
+```
+
+```{r}
+library(colorspace)
+
+mid <- median(faithfuld$density)
+
+# Added the titles, so it's easier to remember which one you're looking at
+erupt +
+  scale_fill_gradient2(midpoint = mid) +
+  labs(title = "scale_fill_gradient2(midpoint = mid)")
+
+erupt +
+  scale_fill_gradientn(colors = terrain.colors(7)) +
+  labs(title = "scale_fill_gradientn(colors = terrain.colors(7))")
+
+erupt +
+  scale_fill_gradientn(colors = heat_hcl(7)) +
+  labs(title = "scale_fill_gradientn(colors = heat_hcl(7))")
+
+erupt +
+  scale_fill_gradientn(colors = diverge_hcl(7)) +
+  labs(title = "scale_fill_gradientn(colors = diverge_hcl(7))")
+
+erupt +
+  scale_fill_distiller() +
+  labs(title = "scale_fill_distiller()")
+
+erupt +
+  scale_fill_distiller(palette = "RdPu") +
+  labs(title = 'scale_fill_distiller(palette = "RdPu")')
+
+erupt +
+  scale_fill_distiller(palette = "YlOrBr") +
+  labs(title = 'scale_fill_distiller(palette = "YlOrBr")')
+```
+
+```{r}
+tbl <- tibble(x = 1, y = 1:5, z = c(1, 3, 2, NA, 5))
+
+p <- tbl %>% 
+  ggplot(aes(x, y, fill = z)) +
+  geom_tile(size = 5)
+
+p
+
+# Make missing colors invisible
+p +
+  scale_fill_gradient(na.value = NA)
+
+# Customize on a black and white scale
+p +
+  scale_fill_gradient(
+    low      = "black",
+    high     = "white",
+    na.value = "red"
+  )
+```
+
+#### 6.6.2.2 Discrete
+
+```{r}
+library(wesanderson)
+
+tbl <- tibble(
+  x = c("a", "b", "c", "d"),
+  y = c(3, 4, 1, 2)
+)
+
+bars <- tbl %>%
+  ggplot(aes(x, y, fill = x)) +
+  geom_bar(stat = "identity") +
+  labs(
+    x = NULL,
+    y = NULL
+  ) +
+  theme(legend.position = "none")
+
+bars
+
+# Added the titles, so it's easier to remember which one you're looking at
+bars +
+  scale_fill_hue(c = 40) +
+  labs(title = "scale_fill_hue(c = 40)")
+
+bars +
+  scale_fill_hue(h = c(180, 300)) +
+  labs(title = "scale_fill_hue(h = c(180, 300))")
+
+bars +
+  scale_fill_brewer(palette = "Set1") +
+  labs(title = 'scale_fill_brewer(palette = "Set1")')
+
+bars +
+  scale_fill_brewer(palette = "Set2") +
+  labs(title = 'scale_fill_brewer(palette = "Set2")')
+
+bars +
+  scale_fill_brewer(palette = "Accent") +
+  labs(title = 'scale_fill_brewer(palette = "Accent")')
+
+bars +
+  scale_fill_grey() +
+  labs(title = "scale_fill_grey()")
+
+bars +
+  scale_fill_grey(start = 0.5, end = 1) +
+  labs(title = "scale_fill_grey(start = 0.5, end = 1)")
+
+bars +
+  scale_fill_grey(start = 0, end = 0.5) +
+  labs(title = "scale_fill_grey(start = 0, end = 0.5)")
+
+bars +
+  scale_fill_manual(
+    values = wes_palette("GrandBudapest1")
+  ) +
+  labs(title = 'scale_fill_manual(
+    values = wes_palette("GrandBudapest1")
+  )')
+bars +
+  scale_fill_manual(
+    values = wes_palette("Zissou1")
+  ) +
+  labs(title = 'scale_fill_manual(
+    values = wes_palette("Zissou1")
+  )')
+
+bars +
+  scale_fill_manual(
+    values = wes_palette("Rushmore1")
+  ) +
+  labs(title = 'scale_fill_manual(
+    values = wes_palette("Rushmore1")
+  )')
+```
+
+```{r}
+# Bright colors work best with points
+tbl <- data.frame(
+  x = 1:3 + runif(30),
+  y = runif(30),
+  z = c("a", "b", "c")
+) %>% as_tibble()
+
+point <- tbl %>% 
+  ggplot(aes(x, y, color = z)) +
+  geom_point() +
+  theme(legend.position = "none") +
+  labs(
+    x = NULL,
+    y = NULL
+  )
+
+point +
+  scale_color_brewer(palette = "Set1")
+
+point +
+  scale_color_brewer(palette = "Set2")
+
+point +
+  scale_color_brewer(palette = "Pastel1")
+```
+
+```{r}
+# Subtler colors work better with areas
+tbl <- tibble(x = 1:3, y = 3:1, z = c("a", "b", "c"))
+
+area <- tbl %>% 
+  ggplot(aes(x, y, fill = z)) +
+  geom_bar(stat = "identity") +
+  theme(legend.position = "none") +
+  labs(
+    x = NULL,
+    y = NULL
+  )
+
+area +
+  scale_fill_brewer(palette = "Set1")
+
+area +
+  scale_fill_brewer(palette = "Set2")
+
+area +
+  scale_fill_brewer(palette = "Pastel1")
+```
+
+### 6.6.3 The Manual Discrete Scale
+
+```{r}
+plot <- msleep %>%
+  ggplot(aes(brainwt, bodywt, color = vore)) +
+  scale_x_log10() +
+  scale_y_log10()
+
+plot +
+  geom_point() +
+  scale_color_manual(
+    values   = c("red", "orange", "green", "blue"),
+    na.value = "grey50"
+  )
+
+colors <- c(
+  carni   = "red",
+  insecti = "orange",
+  herbi   = "green",
+  omni    = "blue"
+)
+
+plot +
+  geom_point() +
+  scale_color_manual(
+    values   = colors,
+    na.value = "grey50"
+  )
+```
+
+```{r}
+huron <- tibble(
+  year  = 1875:1972,
+  level = as.numeric(LakeHuron)
+)
+
+huron %>% 
+  ggplot(aes(year)) +
+  geom_line(aes(y = level + 5), color = "red") +
+  geom_line(aes(y = level - 5), color = "blue")
+
+p <- huron %>% 
+  ggplot(aes(year)) +
+  geom_line(aes(y = level + 5, color = "above")) +
+  geom_line(aes(y = level - 5, color = "below"))
+
+p
+
+p +
+  scale_color_manual(
+    "Direction",
+    values = c("above" = "red", "below" = "blue")
+  )
+```
+
+### 6.6.4 The Identity Scale
+
+```{r}
+head(luv_colours)
+
+luv_colours %>% 
+  ggplot(aes(u, v, color = col)) +
+  geom_point(size = 3) +
+  scale_color_identity() +
+  coord_equal()
+```
