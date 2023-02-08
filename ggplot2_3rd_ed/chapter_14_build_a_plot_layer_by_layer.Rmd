@@ -38,7 +38,7 @@ p +
     geom     = "point", 
     stat     = "identity",
     position = "identity"
-)
+  )
 ```
 
 ## 14.3 Data

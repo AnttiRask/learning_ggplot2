@@ -59,28 +59,26 @@ mpg %>%
 ```{r}
 # Without touching models
 mpg %>%
-    distinct(manufacturer, model) %>% 
-    with_groups(
-        manufacturer,
-        summarize,
-        n = n()
-    ) %>%
-    arrange(desc(n))
+  distinct(manufacturer, model) %>% 
+  summarize(
+    n   = n(),
+    .by = manufacturer 
+  ) %>%
+  arrange(desc(n))
 ```
 
 ```{r}
 # With the core models only
 mpg %>%
-    mutate(
-        core_model = str_extract(model, "^\\S+")
-    ) %>%
-    distinct(manufacturer, core_model) %>%
-    with_groups(
-        manufacturer,
-        summarize,
-        n = n()
-    ) %>%
-    arrange(desc(n))
+  mutate(
+    core_model = str_extract(model, "^\\S+")
+  ) %>%
+  distinct(manufacturer, core_model) %>%
+  summarize(
+    n   = n(),
+    .by = manufacturer
+  ) %>%
+  arrange(desc(n))
 ```
 
 ## 2.3 Key Components
@@ -104,31 +102,30 @@ mpg %>%
 ```{r}
 # Models and manufacturers
 mpg %>% 
-    ggplot(aes(model, manufacturer)) +
-    geom_point()
+  ggplot(aes(model, manufacturer)) +
+  geom_point()
 
 # One example solution with the amount of unique models by manufacturer
 mpg %>%
-    mutate(
-        manufacturer = manufacturer %>% as.factor(),
-        core_model = str_extract(model, "^\\S+")
-    ) %>%
-    distinct(manufacturer, core_model) %>%
-    with_groups(
-        manufacturer,
-        summarize,
-        n = n()
-    ) %>%
-    
-    ggplot(aes(fct_reorder(manufacturer, n), n)) +
-    geom_col() +
-    coord_flip() +
-    labs(
-        title    = "Amount of unique models by manufacturer",
-        subtitle = "",
-        x        = "",
-        y        = ""
-    )
+  mutate(
+    manufacturer = manufacturer %>% as.factor(),
+    core_model = str_extract(model, "^\\S+")
+  ) %>%
+  distinct(manufacturer, core_model) %>%
+  summarize(
+    n   = n(),
+    .by = manufacturer
+  ) %>%
+  
+  ggplot(aes(fct_reorder(manufacturer, n), n)) +
+  geom_col() +
+  coord_flip() +
+  labs(
+    title    = "Amount of unique models by manufacturer",
+    subtitle = "",
+    x        = "",
+    y        = ""
+  )
 ```
 
 3.

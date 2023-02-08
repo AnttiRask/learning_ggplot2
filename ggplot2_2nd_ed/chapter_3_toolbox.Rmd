@@ -566,14 +566,14 @@ p <- mi_counties %>%
   
 p +
   geom_polygon() +
-  coord_quickmap()
+  coord_sf()
 
 p +
   geom_polygon(
     fill = NA, 
     color = "grey50"
   ) + 
-  coord_quickmap()
+  coord_sf()
 ```
 
 ```{r}
@@ -588,7 +588,7 @@ head(c18tbl)
 c18tbl %>%
   ggplot(aes(long, lat, group = group)) +
   geom_polygon(color = "grey50", fill = NA) +
-  coord_quickmap()
+  coord_sf()
 ```
 
 ### 3.7.2 Point Metadata
@@ -612,7 +612,7 @@ mi_cities %>%
   ggplot(aes(lon, lat, size = pop)) +
   geom_point() +
   scale_size_area() +
-  coord_quickmap()
+  coord_sf()
 ```
 
 ```{r}
@@ -626,7 +626,7 @@ mi_cities %>%
   ) +
   geom_point(aes(size = pop), color = "red") +
   scale_size_area() +
-  coord_quickmap()
+  coord_sf()
 ```   
 
 ### 3.7.3 Raster Images
@@ -958,10 +958,9 @@ gw_by_county <- st_join(
   gw_KS_sf
 ) %>%
   as_tibble() %>%
-  with_groups(
-    c(COUNTYFP, year),
-    summarize,
-    af_used = sum(af_used, na.rm = TRUE)
+  summarize(
+    af_used = sum(af_used, na.rm = TRUE),
+    .by     = c(COUNTYFP, year)
   ) %>% 
   left_join(KS_county, ., by = "COUNTYFP") %>%
   filter(!is.na(year))
@@ -1104,11 +1103,11 @@ p <- census_counties %>%
   
 p +
   geom_polygon(aes(fill = poptotal)) +
-  coord_quickmap()
+  coord_sf()
 
 p +
   geom_polygon(aes(fill = percwhite)) +
-  coord_quickmap()
+  coord_sf()
 ```
 
 ## 3.8 Revealing Uncertainty

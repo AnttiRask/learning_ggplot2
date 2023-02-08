@@ -22,8 +22,8 @@ library(conflicted)
 
 ```{r}
 mpg %>%
-    ggplot(aes(displ, hwy, color = factor(cyl))) +
-    geom_point()
+  ggplot(aes(displ, hwy, color = factor(cyl))) +
+  geom_point()
 ```
 
 ### 13.2.1 Mapping aesthetics to data
@@ -52,8 +52,8 @@ p +
 
 ```{r}
 mpg %>%
-    ggplot(aes(displ, hwy)) + 
-    geom_point() +
-    geom_smooth() + 
-    facet_wrap(vars(year))
+  ggplot(aes(displ, hwy)) + 
+  geom_point() +
+  geom_smooth() + 
+  facet_wrap(vars(year))
 ```

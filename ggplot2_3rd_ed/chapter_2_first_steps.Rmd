@@ -14,8 +14,8 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(tidyverse)
 library(conflicted)
-  conflict_prefer("filter", "dplyr")
-  conflict_prefer("select", "dplyr")
+conflict_prefer("filter", "dplyr")
+conflict_prefer("select", "dplyr")
 ```
 
 ## 2.2 Fuel economy data
@@ -47,48 +47,46 @@ data(package = "ggplot2")
 3.
 ```{r}
 mpg %>% 
-    # Miles per gallon
-    select(cty, hwy) %>% 
-    mutate(
-        cty_eur = 235.21 / cty,
-        hwy_eur = 235.21 / hwy
-    )
+  # Miles per gallon
+  select(cty, hwy) %>% 
+  mutate(
+    cty_eur = 235.21 / cty,
+    hwy_eur = 235.21 / hwy
+  )
 ```
 
 4.
 ```{r}
 # Without touching models
 mpg %>%
-    distinct(manufacturer, model) %>% 
-    with_groups(
-        manufacturer,
-        summarize,
-        n = n()
-    ) %>%
-    arrange(desc(n))
+  distinct(manufacturer, model) %>% 
+  summarize(
+    n   = n(),
+    .by = manufacturer
+  ) %>%
+  arrange(desc(n))
 ```
 
 ```{r}
 # With the core models only
 mpg %>%
-    mutate(
-        core_model = str_extract(model, "^\\S+")
-    ) %>%
-    distinct(manufacturer, core_model) %>%
-    with_groups(
-        manufacturer,
-        summarize,
-        n = n()
-    ) %>%
-    arrange(desc(n))
+  mutate(
+    core_model = str_extract(model, "^\\S+")
+  ) %>%
+  distinct(manufacturer, core_model) %>%
+  summarize(
+    n = n(),
+    .by = manufacturer
+  ) %>%
+  arrange(desc(n))
 ```
 
 ## 2.3 Key components
 
 ```{r}
 mpg %>% 
-    ggplot(aes(displ, hwy)) +
-    geom_point()
+  ggplot(aes(displ, hwy)) +
+  geom_point()
 ```
 
 ### 2.3.1 Exercises
@@ -96,39 +94,38 @@ mpg %>%
 1.
 ```{r}
 mpg %>% 
-    ggplot(aes(cty, hwy)) +
-    geom_point()
+  ggplot(aes(cty, hwy)) +
+  geom_point()
 ```
 
 2.
 ```{r}
 # Models and manufacturers
 mpg %>% 
-    ggplot(aes(model, manufacturer)) +
-    geom_point()
+  ggplot(aes(model, manufacturer)) +
+  geom_point()
 
 # One example solution with the amount of unique models by manufacturer
 mpg %>%
-    mutate(
-        manufacturer = manufacturer %>% as.factor(),
-        core_model = str_extract(model, "^\\S+")
-    ) %>%
-    distinct(manufacturer, core_model) %>%
-    with_groups(
-        manufacturer,
-        summarize,
-        n = n()
-    ) %>%
-    
-    ggplot(aes(fct_reorder(manufacturer, n), n)) +
-    geom_col() +
-    coord_flip() +
-    labs(
-        title    = "Amount of unique models by manufacturer",
-        subtitle = "",
-        x        = "",
-        y        = ""
-    )
+  mutate(
+    manufacturer = manufacturer %>% as.factor(),
+    core_model = str_extract(model, "^\\S+")
+  ) %>%
+  distinct(manufacturer, core_model) %>%
+  summarize(
+    n   = n(),
+    .by = manufacturer
+  ) %>%
+  
+  ggplot(aes(fct_reorder(manufacturer, n), n)) +
+  geom_col() +
+  coord_flip() +
+  labs(
+    title    = "Amount of unique models by manufacturer",
+    subtitle = "",
+    x        = "",
+    y        = ""
+  )
 ```
 
 3.
@@ -158,14 +155,14 @@ mpg %>%
 
 ```{r}
 mpg %>%
-ggplot(aes(displ, cty, color = class)) +
-    geom_point()
+  ggplot(aes(displ, cty, color = class)) +
+  geom_point()
 ```
 
 ```{r}
 p <- mpg %>% 
   ggplot(aes(displ, hwy))
-  
+
 p +
   geom_point(aes(color = "blue"))
 
@@ -208,12 +205,12 @@ mpg %>%
 3.
 ```{r}
 mpg %>%
-    ggplot(aes(drv, cty)) +
-    geom_boxplot()
+  ggplot(aes(drv, cty)) +
+  geom_boxplot()
 
 mpg %>%
-    ggplot(aes(class, displ)) +
-    geom_point(aes(color = drv))
+  ggplot(aes(class, displ)) +
+  geom_point(aes(color = drv))
 ```
 
 ## 2.5 Faceting
@@ -316,7 +313,7 @@ mpg %>%
 ```{r}
 p <- mpg %>%
   ggplot(aes(drv, hwy)) 
-  
+
 p +
   geom_point()
 
@@ -376,7 +373,7 @@ drugs <- tibble(
 
 p <- drugs %>% 
   ggplot(aes(drug, effect))
-  
+
 p +
   geom_bar(stat = "identity")
 
@@ -559,7 +556,7 @@ mpg %>%
     .width        = 0,
     point_color   = NA
   ) +
-    
+  
   # Add boxplot
   geom_boxplot(
     width          = .12,
@@ -577,7 +574,7 @@ mpg %>%
     # Adjust grouping (binning) of observations
     binwidth = .25
   ) +
-    
+  
   # Adjust theme
   scale_fill_tq() +
   theme_tq() +
