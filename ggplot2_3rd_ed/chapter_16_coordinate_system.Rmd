@@ -1,0 +1,248 @@
+---
+title: "Wickham, Hadley - ggplot2: Elegant Graphics for Data Analysis (3rd ed.), Chapter 16 - Coordinate systems"
+author: "Original Code: Hadley Wickham | Modifications: Antti Rask"
+date: "2023-01-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 16 Coordinate systems
+
+```{r}
+library(tidyverse)
+library(conflicted)
+  conflict_prefer("filter", "dplyr")
+  conflict_prefer("select", "dplyr")
+```
+
+## 16.1 Linear coordinate systems
+
+### 16.1.1 Zooming into a plot with coord_cartesian()
+
+```{r}
+base <- mpg %>% 
+  ggplot(aes(displ, hwy)) + 
+  geom_point() + 
+  geom_smooth()
+
+# Full dataset
+base
+
+# Scaling to 4--6 throws away data outside that range
+base +
+  scale_x_continuous(limits = c(4, 6))
+
+# Zooming to 4--6 keeps all the data but only shows some of it
+base +
+  coord_cartesian(xlim = c(4, 6))
+```
+
+### 16.1.2 Flipping the axes with coord_flip()
+
+```{r}
+p <- mpg %>%
+  ggplot(aes(displ, cty)) +
+  geom_point() + 
+  geom_smooth()
+
+p
+
+# Exchanging cty and displ rotates the plot 90 degrees, # but the smooth is fit to the rotated data.
+mpg %>%
+  ggplot(aes(cty, displ)) + 
+  geom_point() + 
+  geom_smooth()
+
+# coord_flip() fits the smooth to the original data, and then rotates the output
+p +
+  coord_flip()
+```
+
+## 16.2 Non-linear coordinate systems
+
+```{r}
+rect <- tibble(x = 50, y = 50)
+line <- tibble(x = c(1, 200), y = c(100, 1))
+
+base <- ggplot(mapping = aes(x, y)) +
+  geom_tile(
+    data = rect,
+    aes(width = 50, height = 50)
+  ) + 
+  geom_line(data = line) + 
+  labs(
+    x = NULL,
+    y = NULL
+  )
+
+base +
+  labs(title = "base")
+
+base +
+  coord_polar("x") +
+  labs(title = 'coord_polar("x")')
+
+base +
+  coord_polar("y") +
+  labs(title = 'coord_polar("y")')
+
+base +
+  coord_flip() +
+  labs(title = "coord_flip")
+
+base +
+  coord_trans(y = "log10") +
+  labs(title = 'coord_trans(y = "log10")')
+
+base +
+  coord_fixed() +
+  labs(title = "coord_fixed()")
+```
+
+Munching:
+
+1. We start with a line parameterised by its two endpoints:
+```{r}
+tbl <- tibble(
+  r     = c(0, 1),
+  theta = c(0, 3 / 2 * pi)
+)
+
+tbl %>%
+  ggplot(aes(r, theta)) + 
+  geom_line() + 
+  geom_point(size = 2, color = "red")
+```
+
+2. We break it into multiple line segments, each with two endpoints:
+```{r}
+interp <- function(rng, n) {
+  seq(rng[1], rng[2], length = n)
+}
+
+munched <- tibble(
+  r     = interp(tbl$r, 15),
+  theta = interp(tbl$theta, 15)
+)
+
+munched %>%
+  ggplot(aes(r, theta)) + 
+  geom_line() + 
+  geom_point(size = 2, color = "red")
+```
+
+3. We transform the locations of each piece:
+```{r}
+transformed <- transform(
+  munched,
+  x = r * sin(theta),
+  y = r * cos(theta)
+)
+
+transformed %>%
+  ggplot(aes(x, y)) + 
+  geom_path() + 
+  geom_point(size = 2, color = "red") + 
+  coord_fixed()
+```
+
+### 16.2.1 Transformations with coord_trans()
+
+```{r, warning=FALSE}
+library(scales)
+
+# Linear model on original scale is poor fit
+base <- diamonds %>% 
+  ggplot(aes(carat, price)) + 
+  stat_bin2d() + 
+  geom_smooth(method = "lm") + 
+  labs(
+    x = NULL,
+    y = NULL
+  ) +
+  theme(legend.position = "none")
+
+base
+
+# Better fit on log scale, but harder to interpret
+p <- base +
+  scale_x_log10() + 
+  scale_y_log10()
+
+p
+
+# Fit on log scale, then backtransform to original.
+# Highlights lack of expensive diamonds with large
+# carats
+pow10 <- exp_trans(10)
+
+p +
+  coord_trans(x = pow10, y = pow10)
+```
+
+### 16.2.2 Polar coordinates with coord_polar()
+
+```{r}
+base <- mtcars %>% 
+  ggplot(aes(factor(1), fill = factor(cyl))) +
+  geom_bar(width = 1) +
+  theme(legend.position = "none") +
+  scale_x_discrete(NULL, expand = c(0, 0)) +
+  scale_y_continuous(NULL, expand = c(0, 0))
+
+# Stacked barchart
+base
+
+# Pie chart
+base +
+  coord_polar(theta = "y")
+
+# The bullseye chart
+base +
+  coord_polar()
+```
+
+### 16.2.3 Map Projections with coord_map()
+
+```{r}
+# Prepare a map of NZ
+nzmap <- map_data("nz") %>%
+  ggplot(aes(long, lat, group = group)) +
+  geom_polygon(fill = "white", color = "black") +
+  labs(
+    x = NULL,
+    y = NULL
+  )
+
+# Plot it in cartesian coordinates
+nzmap
+
+# With the aspect ratio approximation
+nzmap +
+  # coord_quickmap -> coord_sf
+  coord_sf()
+```
+
+```{r}
+# Since coord_map() has been superseded by coord_sf, I've modified this code to use that instead
+world   <- map_data("world")
+finland <- map_data("world", "finland")
+
+worldmap <- world %>% 
+  ggplot(aes(long, lat, group = group))
+
+worldmap +
+  geom_path() +
+  geom_path(data = finland, color = "blue") +
+  # coord_map -> coord_sf
+  coord_sf()
+
+worldmap +
+  geom_polygon(fill = "white", color = "black") +
+  geom_polygon(data = finland, fill = "blue") +
+  # coord_map -> coord_sf
+  coord_sf()
+```

@@ -1,0 +1,522 @@
+---
+title: "Wickham, Hadley - ggplot2: Elegant Graphics for Data Analysis (2nd ed.), Chapter 7 - Positioning"
+author: "Original Code: Hadley Wickham | Modifications: Antti Rask"
+date: "2023-01-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 7 Positioning
+
+```{r}
+library(tidyverse)
+library(conflicted)
+  conflict_prefer("filter", "dplyr")
+  conflict_prefer("select", "dplyr")
+```
+
+## 7.2 Facetting
+
+```{r}
+mpg2 <- mpg %>%
+  # subset -> filter
+  filter(cyl != 5 & drv %in% c("4", "f") & class != "2seater")
+```
+
+### 7.2.1 Facet Wrap
+
+```{r}
+base <- mpg2 %>% 
+  ggplot(aes(displ, hwy)) + 
+  geom_blank() + 
+  labs(
+    x = NULL,
+    y = NULL
+  )
+
+base +
+  facet_wrap(
+    vars(class),
+    ncol = 3
+  )
+
+base + facet_wrap(
+  vars(class),
+  ncol     = 3,
+  as.table = FALSE
+)
+
+base +
+  facet_wrap(
+    vars(class),
+    nrow = 3
+  )
+
+base +
+  facet_wrap(
+    vars(class),
+    nrow = 3,
+    dir  = "v"
+  )
+```
+
+### 7.2.2 Facet Grid
+
+```{r}
+base +
+  facet_grid(cols = vars(cyl))
+
+base +
+  facet_grid(rows = vars(drv))
+
+base +
+  facet_grid(vars(drv), vars(cyl))
+```
+
+### 7.2.3 Controlling Scales
+
+```{r}
+p <- mpg2 %>% 
+  ggplot(aes(cty, hwy)) +
+  geom_abline() +
+  geom_jitter(width = 0.1, height = 0.1) 
+
+p + 
+  facet_wrap(vars(cyl))
+
+p +
+  facet_wrap(vars(cyl), scales = "free")
+```
+
+```{r}
+economics_long
+
+economics_long %>%
+  ggplot(aes(date, value)) + 
+  geom_line() + 
+  facet_wrap(
+    vars(variable),
+    scales = "free_y",
+    ncol   = 1
+  )
+```
+
+```{r}
+mpg3 <- mpg2 %>%
+  mutate(
+    model        = as_factor(model),
+    manufacturer = as_factor(manufacturer)
+  )
+
+mpg3 %>%
+  ggplot(aes(cty, fct_reorder(model, cty))) + 
+  geom_point() +
+  facet_grid(
+    rows = vars(
+      fct_reorder(
+        manufacturer,
+        cty,
+        .desc = TRUE
+      )
+    ),
+    scales = "free",
+    space  = "free"
+  ) +
+  theme(strip.text.y = element_text(angle = 0)) +
+  labs(y = "model")
+```
+
+### 7.2.4 Missing Facetting Variables
+
+```{r}
+tbl1 <- tibble(
+  x      = 1:3,
+  y      = 1:3,
+  gender = c("f", "f", "m")
+)
+
+tbl2 <- tibble(x = 2, y = 2)
+
+tbl1 %>%
+  ggplot(aes(x, y)) + 
+  geom_point(
+    data  = tbl2,
+    color = "red",
+    size  = 2
+  ) + 
+  geom_point() + 
+  facet_wrap(vars(gender))
+```
+
+### 7.2.5 Grouping vs. Facetting
+
+```{r}
+tbl <- data.frame(
+  x = rnorm(120, c(0, 2, 4)),
+  y = rnorm(120, c(1, 2, 1)),
+  z = letters[1:3]
+) %>% as_tibble()
+
+# Grouping
+p <- tbl %>%
+  ggplot(aes(x, y))
+
+p +
+  geom_point(aes(color = z)) +
+  labs(title = "Grouping")
+
+# Faceting
+p +
+  geom_point() + 
+  facet_wrap(vars(z)) +
+  labs(title = "Faceting")
+
+# Faceting with means
+tbl_sum <- tbl %>%
+  summarize(
+    x   = mean(x),
+    y   = mean(y),
+    .by = z
+  ) %>%
+  rename(z2 = z)
+
+p + 
+  geom_point() + 
+  geom_point(
+    data       = tbl_sum,
+    aes(color  = z2),
+    size       = 4
+  ) + 
+  facet_wrap(vars(z)) +
+  labs(title = "Faceting with Means")
+
+# Grouping + faceting
+tbl3 <- tbl %>% 
+  select(-z)
+
+p +
+  geom_point(data = tbl3, color = "grey70") +
+  geom_point(aes(color = z)) + 
+  facet_wrap(vars(z)) +
+  labs(title = "Grouping + Faceting")
+```
+
+### 7.2.6 Continuous Variables
+
+```{r}
+mpg4 <- mpg2 %>% 
+  mutate(
+    # Bins of width 1
+    disp_w = displ %>% cut_width(1),
+    # Six bins of equal length
+    disp_i = displ %>% cut_interval(6),
+    # Six bins containing equal numbers of points
+    disp_n = displ %>% cut_number(6)
+  )
+
+plot <- mpg4 %>% 
+  ggplot(aes(cty, hwy)) +
+  geom_point() +
+  labs(
+    x = NULL,
+    y = NULL
+  )
+
+plot +
+  facet_wrap(vars(disp_w), nrow = 1)
+
+plot +
+  facet_wrap(vars(disp_i), nrow = 1)
+
+plot +
+  facet_wrap(vars(disp_n), nrow = 1)
+```
+
+### 7.2.7 Exercises
+
+1.
+```{r}
+carats <- diamonds %>%
+  mutate(carat = carat %>% as.integer())
+
+carats %>% 
+  ggplot(
+    aes(
+      price,
+      color = as.factor(carat)
+    )
+  ) +
+  geom_freqpoly() +
+  facet_wrap(vars(cut), scales = "free_y") +
+  labs(color = "carat")
+
+carats %>%
+  ggplot(aes(price, color = cut)) +
+  geom_freqpoly() +
+  facet_wrap(vars(carat), scales = "free_y")
+```
+
+2.
+```{r}
+p <- diamonds %>%
+  ggplot(aes(carat, price, color = color)) +
+  geom_point()
+
+p
+
+p +
+  facet_wrap(vars(color))
+
+diamonds2 <- diamonds %>% 
+  select(-color)
+
+diamonds %>%
+  ggplot(aes(carat, price)) +
+  geom_point(data = diamonds2, color = "grey70") +
+  geom_point(aes(color = color)) + 
+  facet_wrap(vars(color))
+```
+
+4.
+```{r}
+mpg2 %>% 
+  ggplot(aes(displ, hwy)) +
+  geom_point() +
+  geom_smooth(
+    data = mpg2 %>% select(-class),
+    se = FALSE
+  ) +
+  facet_wrap(vars(class))
+```
+
+## 7.4 Linear Coordinate Systems
+
+### 7.4.1 Zooming into a Plot with coord_cartesian()
+
+```{r}
+base <- mpg %>% 
+  ggplot(aes(displ, hwy)) + 
+  geom_point() + 
+  geom_smooth()
+
+# Full dataset
+base
+
+# Scaling to 4--6 throws away data outside that range
+base +
+  scale_x_continuous(limits = c(4, 6))
+
+# Zooming to 4--6 keeps all the data but only shows some of it
+base +
+  coord_cartesian(xlim = c(4, 6))
+```
+
+### 7.4.2 Flipping the Axes with coord_flip()
+
+```{r}
+p <- mpg %>%
+  ggplot(aes(displ, cty)) +
+  geom_point() + 
+  geom_smooth()
+
+p
+
+# Exchanging cty and displ rotates the plot 90 degrees, # but the smooth is fit to the rotated data.
+mpg %>%
+  ggplot(aes(cty, displ)) + 
+  geom_point() + 
+  geom_smooth()
+
+# coord_flip() fits the smooth to the original data, and then rotates the output
+p +
+  coord_flip()
+```
+
+## 7.5 Non-linear Coordinate Systems
+
+```{r}
+rect <- tibble(x = 50, y = 50)
+line <- tibble(x = c(1, 200), y = c(100, 1))
+
+base <- ggplot(mapping = aes(x, y)) +
+  geom_tile(
+    data = rect,
+    aes(width = 50, height = 50)
+  ) + 
+  geom_line(data = line) + 
+  labs(
+    x = NULL,
+    y = NULL
+  )
+
+base +
+  labs(title = "base")
+
+base +
+  coord_polar("x") +
+  labs(title = 'coord_polar("x")')
+
+base +
+  coord_polar("y") +
+  labs(title = 'coord_polar("y")')
+
+base +
+  coord_flip() +
+  labs(title = "coord_flip")
+
+base +
+  coord_trans(y = "log10") +
+  labs(title = 'coord_trans(y = "log10")')
+
+base +
+  coord_fixed() +
+  labs(title = "coord_fixed()")
+```
+
+Munching:
+
+1. We start with a line parameterised by its two endpoints:
+```{r}
+tbl <- tibble(
+  r     = c(0, 1),
+  theta = c(0, 3 / 2 * pi)
+)
+
+tbl %>%
+  ggplot(aes(r, theta)) + 
+  geom_line() + 
+  geom_point(size = 2, color = "red")
+```
+
+2. We break it into multiple line segments, each with two endpoints:
+```{r}
+interp <- function(rng, n) {
+  seq(rng[1], rng[2], length = n)
+}
+
+munched <- tibble(
+  r     = interp(tbl$r, 15),
+  theta = interp(tbl$theta, 15)
+)
+
+munched %>%
+  ggplot(aes(r, theta)) + 
+  geom_line() + 
+  geom_point(size = 2, color = "red")
+```
+
+3. We transform the locations of each piece:
+```{r}
+transformed <- transform(
+  munched,
+  x = r * sin(theta),
+  y = r * cos(theta)
+)
+
+transformed %>%
+  ggplot(aes(x, y)) + 
+  geom_path() + 
+  geom_point(size = 2, color = "red") + 
+  coord_fixed()
+```
+
+### 7.5.1 Transformations with coord_trans()
+
+```{r, warning=FALSE}
+library(scales)
+
+# Linear model on original scale is poor fit
+base <- diamonds %>% 
+  ggplot(aes(carat, price)) + 
+  stat_bin2d() + 
+  geom_smooth(method = "lm") + 
+  labs(
+    x = NULL,
+    y = NULL
+  ) +
+  theme(legend.position = "none")
+
+base
+
+# Better fit on log scale, but harder to interpret
+base +
+  scale_x_log10() + 
+  scale_y_log10()
+
+# Fit on log scale, then backtransform to original.
+# Highlights lack of expensive diamonds with large
+# carats
+pow10 <- exp_trans(10)
+
+base +
+  scale_x_log10() + 
+  scale_y_log10() + 
+  coord_trans(x = pow10, y = pow10)
+```
+
+### 7.5.2 Polar coordinates with coord_polar()
+
+```{r}
+base <- mtcars %>% 
+  ggplot(aes(factor(1), fill = factor(cyl))) +
+  geom_bar(width = 1) +
+  theme(legend.position = "none") +
+  scale_x_discrete(NULL, expand = c(0, 0)) +
+  scale_y_continuous(NULL, expand = c(0, 0))
+
+# Stacked barchart
+base
+
+# Pie chart
+base +
+  coord_polar(theta = "y")
+
+# The bullseye chart
+base +
+  coord_polar()
+```
+
+### 7.5.3 Map Projections with coord_map()
+
+```{r}
+# Prepare a map of NZ
+nzmap <- map_data("nz") %>%
+  ggplot(aes(long, lat, group = group)) +
+  geom_polygon(fill = "white", color = "black") +
+  labs(
+    x = NULL,
+    y = NULL
+  )
+
+# Plot it in cartesian coordinates
+nzmap
+
+# With the aspect ratio approximation
+nzmap +
+  # coord_quickmap -> coord_sf
+  coord_sf()
+```
+
+```{r}
+# Since coord_map() has been superseded by coord_sf, I've modified this code to use that instead
+world   <- map_data("world")
+finland <- map_data("world", "finland")
+
+worldmap <- world %>% 
+  ggplot(aes(long, lat, group = group))
+
+worldmap +
+  geom_path() +
+  geom_path(data = finland, color = "blue") +
+  # coord_map -> coord_sf
+  coord_sf()
+
+worldmap +
+  geom_polygon(fill = "white", color = "black") +
+  geom_polygon(data = finland, fill = "blue") +
+  # coord_map -> coord_sf
+  coord_sf()
+```
