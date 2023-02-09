@@ -1,0 +1,521 @@
+---
+title: "Wickham, Hadley - ggplot2: Elegant Graphics for Data Analysis (2nd ed.), Chapter 8 - Themes"
+author: "Original Code: Hadley Wickham | Modifications: Antti Rask"
+date: "2023-01-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 8 Themes
+
+```{r}
+library(tidyverse)
+library(conflicted)
+  conflict_prefer("filter", "dplyr")
+  conflict_prefer("select", "dplyr")
+```
+
+## 8.1 Introduction
+
+```{r}
+base <- mpg %>% 
+  ggplot(aes(cty, hwy, color = factor(cyl))) +
+  geom_jitter() + 
+  geom_abline(color = "grey50", linewidth = 2)
+
+base
+
+labelled <- base +
+  labs(
+    x = "City mileage/gallon",
+    y = "Highway mileage/gallon",
+    color = "Cylinders",
+    title = "Highway and city mileage are highly correlated"
+  ) +
+  scale_color_brewer(type = "seq", palette = "Spectral")
+
+labelled
+
+styled <- labelled +
+  theme_bw() + 
+  theme(
+    plot.title           = element_text(face = "bold", size = 12),
+    legend.background    = element_rect(
+      fill      = "white",
+      linewidth = 2,
+      color     = "grey70"
+    ),
+    legend.justification = c(0.99, 0),
+    legend.position      = c(0.95, 0.05),
+    axis.ticks           = element_line(
+      color     = "grey70",
+      linewidth = 0.2
+    ),
+    panel.grid.major     = element_line(
+      color     = "grey70",
+      linewidth = 0.2
+    ),
+    panel.grid.minor     = element_blank()
+  )
+
+styled
+```
+
+## 8.2 Complete Themes
+
+```{r}
+tbl <- tibble(x = 1:3, y = 1:3)
+
+base <- tbl %>% 
+  ggplot(aes(x, y)) +
+  geom_point()
+
+base +
+  theme_grey() +
+  ggtitle("theme_grey()")
+
+base +
+  theme_bw() +
+  ggtitle("theme_bw()")
+
+base +
+  theme_linedraw() +
+  ggtitle("theme_linedraw()")
+
+base +
+  theme_light() +
+  ggtitle("theme_light()")
+
+base +
+  theme_dark() +
+  ggtitle("theme_dark()")
+
+base +
+  theme_minimal() +
+  ggtitle("theme_minimal()")
+
+base +
+  theme_classic() +
+  ggtitle("theme_classic()")
+
+base +
+  theme_void() +
+  ggtitle("theme_void()")
+```
+
+```{r}
+library(ggthemes)
+
+base +
+  theme_tufte() +
+  ggtitle("theme_tufte()")
+
+base +
+  theme_solarized() +
+  ggtitle("theme_solarized()")
+
+base +
+  theme_excel() +
+  ggtitle("theme_excel()")
+```
+
+### 8.2.1 Exercises
+
+1.
+```{r}
+base +
+  theme_base() +
+  ggtitle("theme_base()")
+
+base +
+  theme_calc() +
+  ggtitle("theme_calc()")
+
+base +
+  theme_clean() +
+  ggtitle("theme_clean()")
+
+base +
+  theme_economist() +
+  ggtitle("theme_economist()")
+
+base +
+  theme_economist_white() +
+  ggtitle("theme_economist_white()")
+
+base +
+  theme_excel_new() +
+  ggtitle("theme_excel_new()")
+
+base +
+  theme_few() +
+  ggtitle("theme_few()")
+
+base +
+  theme_fivethirtyeight() +
+  ggtitle("theme_fivethirtyeight()")
+
+base +
+  theme_foundation() +
+  ggtitle("theme_foundation()")
+
+base +
+  theme_gdocs() +
+  ggtitle("theme_gdocs()")
+
+base +
+  theme_hc() +
+  ggtitle("theme_hc()")
+
+base +
+  theme_igray() +
+  ggtitle("theme_igray()")
+
+nzmap <- map_data("nz") %>%
+  ggplot(aes(long, lat, group = group)) +
+  geom_polygon(fill = "white", color = "black") +
+  labs(
+    x = NULL,
+    y = NULL
+  )
+
+nzmap +
+  coord_sf() +
+  theme_map() +
+  ggtitle("theme_map()")
+
+base +
+  theme_pander() +
+  ggtitle("theme_pander()")
+
+base +
+  theme_par() +
+  ggtitle("theme_par()")
+
+base +
+  theme_solarized_2() +
+  ggtitle("theme_solarized_2()")
+
+base +
+  theme_solid() +
+  ggtitle("theme_solid()")
+
+base +
+  theme_stata() +
+  ggtitle("theme_stata()")
+
+base +
+  theme_wsj() +
+  ggtitle("theme_wsj()")
+```
+
+## 8.3 Modifying Theme Components
+
+```{r}
+base_t <- base +
+  labs(
+    title = "This is a ggplot",
+    x     = NULL,
+    y     = NULL
+  )
+
+base_t +
+  theme(plot.title = element_text(size = 16))
+
+base_t +
+  theme(
+    plot.title = element_text(
+      face  = "bold",
+      color = "red"
+    )
+  )
+
+base_t +
+  theme(plot.title = element_text(hjust = 1))
+
+base_t +
+  theme(plot.title = element_text(margin = margin()))
+
+base_t +
+  theme(
+    plot.title = element_text(
+      margin = margin(t = 10, b = 10)
+    )
+  )
+
+base_t +
+  theme(
+    axis.title.y = element_text(
+      margin = margin(r = 10)
+    )
+  )
+```
+
+```{r}
+base +
+  theme(panel.grid.major = element_line(color = "black"))
+
+base +
+  theme(panel.grid.major = element_line(linewidth = 2))
+
+base +
+  theme(
+    panel.grid.major = element_line(
+      linetype = "dotted"
+    )
+  )
+```
+
+```{r}
+base +
+  theme(plot.background  = element_rect(fill = "grey80", color = NA))
+
+base +
+  theme(plot.background  = element_rect(color = "red", linewidth = 2))
+
+base +
+  theme(panel.background = element_rect(fill = "linen"))
+```
+
+```{r}
+base
+
+base +
+  theme(panel.grid.minor = element_blank())
+
+base +
+  theme(panel.grid.major = element_blank())
+```
+
+```{r}
+base +
+  theme(panel.background = element_blank())
+
+base +
+  theme(
+    axis.title.x = element_blank(), 
+    axis.title.y = element_blank()
+  )
+
+base +
+  theme(axis.line = element_line(color = "grey50"))
+```
+
+```{r}
+old_theme <- theme_update(
+  plot.background  = element_rect(fill  = "lightblue3", color = NA),
+  panel.background = element_rect(fill  = "lightblue",  color = NA),
+  axis.text        = element_text(color = "linen"),
+  axis.title       = element_text(color = "linen")
+)
+
+base
+
+theme_set(old_theme)
+
+base
+```
+
+## 8.4 Theme Elements
+
+### 8.4.1 Plot Elements
+
+```{r}
+base +
+  theme(plot.background = element_rect(color = "grey50", linewidth = 2))
+
+base +
+  theme(
+    plot.background = element_rect(color = "grey50", linewidth = 2),
+    plot.margin = margin(2, 2, 2, 2)
+  )
+
+base +
+  theme(plot.background = element_rect(fill = "lightblue"))
+```
+
+### 8.4.2 Axis Elements
+
+```{r}
+tbl <- tibble(x = 1:3, y = 1:3)
+
+base <- tbl %>% 
+  ggplot(aes(x, y)) +
+  geom_point()
+
+# Accentuate the axes
+base +
+  theme(axis.line = element_line(color = "grey50", linewidth = 1))
+
+# Style both x and y axis labels
+base +
+  theme(axis.text = element_text(color = "blue", size = 12))
+
+# Useful for long labels
+base +
+  theme(axis.text.x = element_text(angle = -90, vjust = 0.5))
+```
+
+```{r}
+tbl <- tibble(
+  x = c("label", "a long label", "an even longer label"), 
+  y = 1:3
+)
+
+base <- tbl %>%
+  ggplot(aes(x, y)) +
+  geom_point()
+
+base
+
+base + 
+  theme(axis.text.x = element_text(angle = -30, vjust = 1, hjust = 0)) +
+  labs(
+    x = NULL,
+    y = NULL
+  )
+
+# My favorite alternative, using coord_flip()
+base +
+  labs(
+    x = NULL,
+    y = NULL
+  ) +
+  coord_flip()
+```
+
+### 8.4.3 Legends Elements
+
+```{r}
+tbl <- tibble(x = 1:4, y = 1:4, z = rep(c("a", "b"), each = 2))
+
+base <- tbl %>% 
+  ggplot(aes(x, y, color = z)) +
+  geom_point()
+
+base +
+  theme(
+    legend.background = element_rect(
+      fill      = "lemonchiffon", 
+      color     = "grey50", 
+      linewidth = 1
+    )
+  )
+
+base +
+  theme(
+    legend.key        = element_rect(color = "grey50"),
+    legend.key.width  = unit(0.9, "cm"),
+    legend.key.height = unit(0.75, "cm")
+  )
+
+base +
+  theme(
+    legend.text  = element_text(size = 15),
+    legend.title = element_text(size = 15, face = "bold")
+  )
+```
+
+### 8.4.4 Panel Elements
+
+```{r}
+base <- tbl %>% 
+  ggplot(aes(x, y)) +
+  geom_point()
+
+# Modify background
+base +
+  theme(panel.background = element_rect(fill = "lightblue"))
+
+# Tweak major grid lines
+base +
+  theme(panel.grid.major = element_line(color = "gray60", linewidth = 0.8))
+
+# Just in one direction  
+base +
+  theme(panel.grid.major.x = element_line(color = "gray60", linewidth = 0.8))
+```
+
+```{r}
+base2 <- base +
+  theme(plot.background = element_rect(color = "grey50"))
+
+# Wide screen
+base2 +
+  theme(aspect.ratio = 9 / 16)
+
+# Long and skiny
+base2 +
+  theme(aspect.ratio = 2 / 1)
+
+# Square
+base2 +
+  theme(aspect.ratio = 1)
+```
+
+### 8.4.5 Facetting Elements
+
+```{r}
+tbl <- tibble(x = 1:4, y = 1:4, z = c("a", "a", "b", "b"))
+
+base_f <- tbl %>% 
+  ggplot(aes(x, y)) +
+  geom_point() +
+  facet_wrap(vars(z))
+
+base_f
+
+base_f +
+  theme(panel.spacing = unit(0.5, "in"))
+
+base_f +
+  theme(
+    strip.background = element_rect(
+      fill      = "grey20",
+      color     = "grey80",
+      linewidth = 1
+    ),
+    strip.text = element_text(color = "white")
+  )
+```
+
+### 8.4.6 Exercises
+
+2.
+```{r}
+p <- base +
+  theme_dark() +
+  ggtitle("theme_dark()")
+
+p
+
+p + theme(
+  plot.background = element_rect(fill  = "black"),
+  plot.title      = element_text(color = "gray"),
+  axis.title      = element_text(color = "gray"),
+  axis.text       = element_text(color = "gray"),
+)
+```
+
+## 8.5 Saving Your Output
+
+```{r}
+pdf("output/output.pdf", width = 6, height = 6)
+
+p <- mpg %>%
+  ggplot(aes(displ, cty)) +
+  geom_point()
+
+p
+
+dev.off()
+```
+
+```{r}
+p
+
+ggsave("output/output2.pdf")
+```

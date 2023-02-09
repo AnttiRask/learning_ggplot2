@@ -1,0 +1,479 @@
+---
+title: "Wickham, Hadley - ggplot2: Elegant Graphics for Data Analysis (3rd ed.), Chapter 8 - Annotations"
+author: "Original Code: Hadley Wickham (except Claus Wilke for ggfittext) | Modifications: Antti Rask"
+date: "2023-01-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 8 Annotations
+
+```{r}
+library(tidyverse)
+library(conflicted)
+  conflict_prefer("filter", "dplyr")
+  conflict_prefer("select", "dplyr")
+```
+
+## 8.1 Plot and axis titles
+
+```{r}
+mpg %>%
+  ggplot(aes(displ, hwy, color = factor(cyl))) + 
+  geom_point() + 
+  labs(
+    x = "Engine displacement (litres)", 
+    y = "Highway miles per gallon", 
+    color = "Number of cylinders",
+    title = "Mileage by engine size and cylinders",
+    subtitle = "Source: http://fueleconomy.gov"
+  )
+```
+
+```{r}
+values <- seq(from = -2, to = 2, by = .01)
+tbl    <- tibble(x = values, y = values ^ 3)
+
+tbl %>%
+  ggplot(aes(x, y)) + 
+  geom_path() + 
+  labs(y = quote(f(x) == x^3))
+```
+
+```{r}
+library(ggtext)
+
+tbl  <- tibble(x = 1:3, y = 1:3)
+base <- tbl %>%
+  ggplot(aes(x, y)) + 
+  geom_point() + 
+  labs(
+    x = "Axis title with *italics* and **boldface**"
+  )
+
+base
+
+base + 
+  theme(axis.title.x = element_markdown())
+```
+
+```{r}
+base <- mpg %>% 
+  ggplot(aes(cty, hwy, color = factor(cyl))) +
+  geom_jitter() + 
+  geom_abline(color = "grey50", linewidth = 2)
+
+base
+
+labelled <- base +
+  labs(
+    x = "City mileage/gallon",
+    y = "Highway mileage/gallon",
+    color = "Cylinders",
+    title = "Highway and city mileage are highly correlated"
+  ) +
+  scale_color_brewer(type = "seq", palette = "Spectral")
+
+labelled
+
+styled <- labelled +
+  theme_bw() + 
+  theme(
+    plot.title           = element_text(face = "bold", size = 12),
+    legend.background    = element_rect(
+      fill      = "white",
+      linewidth = 2,
+      color     = "grey70"
+    ),
+    legend.justification = c(0.99, 0),
+    legend.position      = c(0.95, 0.05),
+    axis.ticks           = element_line(
+      color     = "grey70",
+      linewidth = 0.2
+    ),
+    panel.grid.major     = element_line(
+      color     = "grey70",
+      linewidth = 0.2
+    ),
+    panel.grid.minor     = element_blank()
+  )
+
+styled
+```
+
+## 8.2 Text labels
+
+```{r}
+tbl <- tibble(
+  x      = 1,
+  y      = 3:1,
+  family = c("sans", "serif", "mono")
+)
+
+tbl %>%
+  ggplot(aes(x, y)) + 
+  geom_text(aes(label = family, family = family))
+```
+
+```{r}
+tbl <- tibble(
+  x    = 1,
+  y    = 3:1,
+  face = c("plain", "bold", "italic")
+)
+
+tbl %>%
+  ggplot(aes(x, y)) + 
+  geom_text(aes(label = face, fontface = face))
+```
+
+```{r}
+tbl <- tibble(
+  x    = c(1, 1, 2, 2, 1.5),
+  y    = c(1, 2, 1, 2, 1.5),
+  text = c(
+    "bottom-left", "top-left",  
+    "bottom-right", "top-right", "center"
+  )
+)
+
+tbl %>%
+  ggplot(aes(x, y)) +
+  geom_text(aes(label = text))
+
+tbl %>%
+  ggplot(aes(x, y)) +
+  geom_text(
+    aes(label = text),
+    vjust = "inward",
+    hjust = "inward"
+  )
+```
+
+```{r}
+tbl <- tibble(
+  treatment = c("a", "b", "c"),
+  response  = c(1.2, 3.4, 2.5)
+  )
+
+tbl %>%
+  ggplot(aes(treatment, response)) + 
+  geom_point() + 
+  geom_text(
+    # paste0 -> str_c
+    aes(label = str_c("(", response, ")")),
+    nudge_x   = -0.3
+  ) +
+  ylim(1.1, 3.6)
+```
+
+```{r}
+p <- mpg %>%
+  ggplot(aes(displ, hwy))
+
+p + 
+  geom_text(aes(label = model)) + 
+  xlim(1, 8)
+
+p + 
+  geom_text(aes(label = model), check_overlap = TRUE) +
+  xlim(1, 8)
+```
+
+```{r}
+tbl <- tibble(
+  waiting   = c(55, 80), 
+  eruptions = c(2, 4.3), 
+  label     = c("peak one", "peak two")
+)
+
+faithfuld %>%
+  ggplot(aes(waiting, eruptions)) +
+  geom_tile(aes(fill = density)) + 
+  geom_label(data = tbl, aes(label = label))
+```
+
+```{r}
+library(ggrepel)
+
+mini_mpg <- mpg %>%
+  # sample + nrow -> slice_sample
+  slice_sample(n = 20)
+
+mpg %>%
+  ggplot(aes(displ, hwy)) +
+  geom_point(color = "red") +
+  geom_text_repel(data = mini_mpg, aes(label = class))
+```
+
+## 8.3 Building custom annotations
+
+```{r}
+economics %>% 
+  ggplot(aes(date, unemploy)) + 
+  geom_line()
+```
+
+```{r}
+presidential_filtered <- presidential %>%
+  # subset + economics$date[1] -> filter + min(economics$date)
+  filter(
+    start > min(economics$date),
+    # added the second filter, because the economics data ends way before the presidential one
+    start < max(economics$date)
+  )
+
+economics %>%
+  ggplot() +
+  geom_rect(
+    aes(xmin = start, xmax = end, fill = party),
+    ymin  = -Inf,
+    ymax  = Inf,
+    alpha = 0.2,
+    data  = presidential_filtered
+  ) +
+  geom_vline(
+    aes(xintercept = as.numeric(start)),
+    data  = presidential_filtered,
+    color = "grey50",
+    alpha = 0.5
+  ) +
+  geom_text(
+    aes(x = start, y = 2500, label = name),
+    data    = presidential_filtered,
+    size    = 3,
+    vjust   = 0,
+    hjust   = 0,
+    nudge_x = 50
+  ) +
+  geom_line(aes(date, unemploy)) +
+  scale_fill_manual(values = c("blue", "red")) +
+  labs(
+    x = "date",
+    y = "unemployment"
+  )
+```
+
+```{r}
+yrng <- range(economics$unemploy)
+xrng <- range(economics$date)
+
+# paste -> str_c
+caption <- str_c(
+  # strwrap -> str_wrap
+  str_wrap(
+    "Unemployment rates in the US have varied a lot over the years",
+    40
+  ),
+  collapse = "\n"
+)
+
+economics %>%
+  ggplot(aes(date, unemploy)) + 
+  geom_line() + 
+  geom_text(
+    aes(x, y, label = caption), 
+    data = tibble(
+      # xrng[1] -> min(xrng)
+      x       = min(xrng),
+      # yrng[2] -> max(yrng)
+      y       = max(yrng),
+      caption = caption
+    ), 
+    hjust = 0,
+    vjust = 1,
+    size  = 4
+  )
+
+# Same, but easier thanks to annotate()
+economics %>%
+ggplot(aes(date, unemploy)) + 
+  geom_line() + 
+  annotate(
+    geom  = "text",
+    # xrng[1] -> min(xrng)
+    x     = min(xrng),
+    # yrng[2] -> max(yrng)
+    y     = max(yrng),
+    label = caption,
+    hjust = 0,
+    vjust = 1,
+    size  = 4
+  )
+```
+
+```{r}
+p <- mpg %>%
+  ggplot(aes(displ, hwy)) +
+  geom_point(
+    data = filter(mpg, manufacturer == "subaru"), 
+    color = "orange",
+    size = 3
+  ) +
+  geom_point() 
+
+p +
+  annotate(
+    geom  = "point",
+    x     = 5.5,
+    y     = 40,
+    color = "orange",
+    size  = 3
+  ) + 
+  annotate(
+    geom = "point",
+    x    = 5.5,
+    y    = 40) +
+  annotate(
+    geom  = "text",
+    x     = 5.6,
+    y     = 40,
+    label = "Subaru",
+    hjust = "left"
+  )
+```
+
+```{r}
+p +
+  annotate(
+    geom      = "curve",
+    x         = 4,
+    y         = 35,
+    xend      = 2.65,
+    yend      = 27, 
+    curvature = .3,
+    arrow     = arrow(length = unit(2, "mm"))
+  ) +
+  annotate(
+    # Changed the geom to label and added the orange fill to make the Subaru pop out a bit more
+    geom  = "label",
+    fill  = "orange",
+    x     = 4.1,
+    y     = 35,
+    label = "Subaru",
+    hjust = "left"
+  )
+```
+
+## 8.4 Direct labelling
+
+```{r}
+library(directlabels)
+
+p <-
+  mpg %>%
+  ggplot(aes(displ, hwy, color = class))
+
+p +
+  geom_point()
+
+p + 
+  geom_point(show.legend = FALSE) +
+  geom_dl(
+    aes(label = class),
+    method    = "smart.grid"
+  )
+```
+
+```{r}
+library(ggforce)
+
+mpg %>%
+  ggplot(aes(displ, hwy)) +
+  geom_point() + 
+  geom_mark_ellipse(aes(label = cyl, group = cyl))
+```
+
+```{r}
+library(gghighlight)
+library(nlme)
+
+oxboys <- Oxboys
+
+oxboys %>%
+ggplot(aes(age, height, group = Subject)) + 
+  geom_line() + 
+  geom_point() + 
+  gghighlight(Subject %in% 1:3)
+```
+
+## 8.5 Annotation across facets
+
+```{r}
+diamonds %>%
+  ggplot(aes(log10(carat), log10(price))) + 
+  geom_bin2d() + 
+  facet_wrap(
+    vars(cut),
+    nrow = 1
+  )
+```
+
+```{r}
+mod_coef <- coef(lm(log10(price) ~ log10(carat), data = diamonds))
+
+diamonds %>%
+  ggplot(aes(log10(carat), log10(price))) + 
+  geom_bin2d() +
+  geom_abline(
+    intercept = mod_coef[1],
+    slope     = mod_coef[2],
+    color     = "white",
+    linewidth = 1
+  ) + 
+  facet_wrap(
+    vars(cut),
+    nrow = 1
+  )
+```
+
+```{r}
+library(gghighlight)
+
+mpg %>%
+  ggplot(aes(displ, hwy, color = factor(cyl))) +
+  geom_point() + 
+  gghighlight() + 
+  facet_wrap(vars(cyl))
+```
+
+## 8.X
+
+### ggfittext
+
+```{r}
+library(ggfittext)
+
+altitudes %>% 
+  ggplot(aes(x = craft, y = altitude, label = altitude)) +
+  geom_col() +
+  geom_bar_text()
+
+p <- beverages %>%
+  ggplot(
+    aes(
+      x     = beverage,
+      y     = proportion,
+      label = ingredient,
+      fill  = ingredient
+    )
+  )
+
+p +
+  geom_col(position      = "stack") +
+  geom_bar_text(position = "stack", reflow = TRUE)
+
+p +
+  geom_col(position = "dodge") +
+  geom_bar_text(
+    position = "dodge",
+    grow     = TRUE,
+    reflow   = TRUE,
+    place    = "left"
+  ) +
+  coord_flip()
+```
+
