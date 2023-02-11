@@ -207,7 +207,7 @@ base +
   )
 ```
 
-15.8 Legend key glyphs
+## 15.8 Legend key glyphs
 
 ```{r}
 base <- economics %>% 
