@@ -1,0 +1,676 @@
+---
+title: "Wickham, Hadley - ggplot2: Elegant Graphics for Data Analysis (3rd ed.), Chapter 9 - Arranging plots"
+author: "Original Code: Hadley Wickham (except Thomas Lin Pedersen for patchwork, Claus O. Wilke for cowplot, and Alboukadel Kassambara for ggpubr) | Modifications: Antti Rask"
+date: "2023-01-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 9 Arranging plots
+
+```{r}
+library(tidyverse)
+library(conflicted)
+  conflict_prefer("filter", "dplyr")
+  conflict_prefer("select", "dplyr")
+library(patchwork)
+```
+
+## 9.1 Laying out plots side by side
+
+```{r}
+p1 <- mpg %>%
+  ggplot(aes(displ, hwy)) + 
+  geom_point() +
+  labs(
+    title = "Plot 1"
+  )
+
+p2 <- mpg %>%
+  ggplot(aes(as.character(year), fill = drv)) + 
+  geom_bar(position = "dodge") + 
+  labs(
+    title = "Plot 2",
+    x = "year"
+  )
+
+p3 <- mpg %>%
+  ggplot(aes(hwy, fill = drv)) + 
+  geom_density(colour = NA) + 
+  facet_grid(rows = vars(drv)) +
+  labs(
+    title = "Plot 3"
+  )
+
+p4 <- mpg %>% 
+  ggplot(aes(drv, hwy)) + 
+  stat_summary(
+    aes(fill = drv),
+    geom     = "col",
+    fun.data = mean_se
+  ) +
+  stat_summary(
+    geom     = "errorbar",
+    fun.data = mean_se,
+    width    = 0.5
+  ) +
+  labs(
+    title = "Plot 4"
+  )
+
+p1 + p2
+
+p1 + p2 + p3
+
+p1 + p2 + p3 + p4
+```
+
+### 9.1.1 Taking control of the layout
+
+```{r}
+p1 + p2 + p3 +
+  plot_layout(ncol = 2)
+
+p1 / p2
+
+# Basically the same as using `+` but the intent is clearer
+p3 | p4
+
+p3 | (p2 / (p1 | p4))
+```
+
+```{r}
+layout <- 
+  "
+AAB
+C#B
+CDD
+"
+
+p1 + p2 + p3 + p4 +
+  plot_layout(design = layout)
+```
+
+```{r, include=FALSE}
+p <- p1 + p2 + p3 + 
+  plot_layout(ncol = 2, guides = "collect")
+```
+
+```{r}
+p
+
+p +
+  guide_area()
+```
+
+
+### 9.1.2 Modifying subplots
+
+```{r, include=FALSE}
+p12 <- p1 + p2
+
+p12[[2]] <- p12[[2]] + 
+  theme_light()
+```
+
+```{r}
+p12
+
+p1 + p4 &
+  theme_minimal()
+
+p1 + p4 &
+  scale_y_continuous(limits = c(0, 45))
+
+# * will add the element to all the subplots in the current nesting level
+p1 / (p3 | p4) *
+  theme_minimal()
+```
+
+### 9.1.3 Adding annotation
+
+```{r, include=FALSE}
+p34 <- p3 + p4 + 
+  plot_annotation(
+    title = "A closer look at the effect of drive train in cars",
+    caption = "Source: mpg dataset in ggplot2"
+  )
+```
+
+```{r}
+p34
+
+p34 + 
+  plot_annotation(theme = theme_gray(base_family = "mono"))
+
+p34 & 
+  theme_gray(base_family = "mono")
+```
+
+```{r, include=FALSE}
+p123 <- p1 | (p2 / p3)
+```
+
+```{r}
+# Uppercase roman numerals
+p123 + 
+  plot_annotation(tag_levels = "I") 
+```
+
+```{r, include=FALSE}
+p123[[2]] <- p123[[2]] + 
+  plot_layout(tag_level = "new")
+```
+
+```{r}
+p123 + 
+  plot_annotation(tag_levels = c("I", "a"))
+```
+
+## 9.2 Arranging plots on top of each other
+
+```{r}
+p1 + 
+  inset_element(
+    p2,
+    left   = 0.5,
+    bottom = 0.4,
+    right  = 0.9,
+    top    = 0.95)
+
+p1 + 
+  inset_element(
+    p2, 
+    left     = 0.4, 
+    bottom   = 0.4, 
+    right    = unit(1, "npc") - unit(15, "mm"), 
+    top      = unit(1, "npc") - unit(15, "mm"),
+    align_to = "full"
+  )
+```
+
+```{r, include=FALSE}
+p24 <- p2 / p4 +
+  plot_layout(guides = "collect")
+```
+
+```{r}
+p1 +
+  inset_element(
+    p24,
+    left   = 0.5,
+    bottom = 0.05,
+    right  = 0.95,
+    top    = 0.9
+  )
+```
+
+```{r, include=FALSE}
+p12 <- p1 +
+  inset_element(
+    p2,
+    left   = 0.5,
+    bottom = 0.5,
+    right  = 0.9,
+    top    = 0.95
+  )
+```
+
+```{r}
+p12 &
+  theme_bw()
+
+p12 +
+  plot_annotation(tag_levels = "A")
+```
+
+## 9.3 Wrapping up
+
+Original from: https://patchwork.data-imaginist.com/
+
+### Adding non-ggplot content
+```{r}
+library(grid)
+library(gridExtra)
+
+p1 + 
+  textGrob('Some really important text')
+
+
+wrap_elements(textGrob('Text on left side')) + p1
+
+p1 +
+  tableGrob(mtcars[1:10, c('mpg', 'disp')])
+```
+
+```{r}
+# 1
+p1 + 
+  ~plot(mtcars$mpg, mtcars$disp, main = 'Plot 2')
+
+# 2
+old_par <- par(mar = c(0, 2, 0, 0), bg = NA)
+
+p1 +
+  wrap_elements(panel = ~plot(mtcars$mpg, mtcars$disp), clip = FALSE)
+
+par(old_par)
+
+old_par <- par(mar = c(0, 0, 0, 0), mgp = c(1, 0.25, 0), 
+               bg = NA, cex.axis = 0.75, las = 1, tcl = -0.25)
+
+# 3
+p1 + 
+  wrap_elements(panel = ~plot(mtcars$mpg, mtcars$disp), clip = FALSE) +
+  ggtitle('Plot 2') +
+  theme(plot.margin = margin(5.5, 5.5, 5.5, 35))
+
+par(old_par)
+```
+
+### Adding an empty area
+
+```{r}
+p1 + 
+  plot_spacer() +
+  p2 + 
+  plot_spacer() + 
+  p3 + 
+  plot_spacer()
+
+# Spacers in separate nesting levels may have different dimensions
+(p1 + plot_spacer() + p2) / (plot_spacer() + p3 + plot_spacer())
+``` 
+
+### Moving beyond the grid
+
+```{r}
+layout <- c(
+  area(t = 2, l = 1, b = 5, r = 4),
+  area(t = 1, l = 3, b = 3, r = 5)
+)
+
+p1 + p2 + 
+  plot_layout(design = layout)
+```
+
+```{r}
+layout <- '
+A#B
+#C#
+D#E
+'
+wrap_plots(
+  D      = p1,
+  C      = p2,
+  B      = p3,
+  design = layout
+)
+```
+
+### Fixed aspect plots
+
+```{r}
+p_fixed <- mtcars %>% 
+  ggplot(aes(hp, disp)) + 
+  geom_point() + 
+  ggtitle("Plot F") + 
+  coord_fixed()
+
+p_fixed + p1 + p2 + p3
+
+p_fixed + p1 + p2 + p3 +
+  plot_layout(widths = 1)
+```
+
+### Alignment across multiple pages
+
+```{r, include = FALSE}
+p3_dims    <- get_dim(p3)
+p1_aligned <- set_dim(p1, p3_dims)
+```
+
+```{r}
+plot(p1_aligned)
+
+p1_aligned +
+  theme_minimal()
+
+plot(p3)
+```
+
+```{r, include=FALSE}
+max_dims <- get_max_dim(p1, p2, p3, p4)
+```
+
+```{r}
+set_dim(p4, max_dims)
+
+set_dim(p2, max_dims)
+```
+
+```{r, include=FALSE}
+plots_aligned <- align_patches(p1, p2, p3, p4)
+```
+
+```{r}
+for (p in plots_aligned) {
+  plot(p)
+}
+```
+
+## 9.X
+
+### cowplot - Streamlined Plot Theme and Plot Annotations for ggplot2
+
+Original from: https://cran.r-project.org/web/packages/cowplot/vignettes/introduction.html
+
+#### Themes
+
+```{r}
+library(cowplot)
+
+# the plot
+p <- iris %>% 
+  ggplot(aes(Sepal.Length, Sepal.Width, color = Species)) +
+  geom_point()
+
+# default ggplot2 theme
+p
+
+# classic cowplot theme
+p +
+  theme_cowplot(12)
+
+# minimal grid theme
+p +
+  theme_minimal_grid(12)
+
+# minimal horizontal grid theme
+p2 <- iris %>%
+  ggplot(aes(Sepal.Length, fill = Species)) +
+  geom_density(alpha = 0.5) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.05)))
+
+p2 +
+  theme_minimal_hgrid(12)
+
+
+
+```
+
+#### Arranging plots into a grid
+
+```{r}
+p1 <- mtcars %>%
+  ggplot(aes(disp, mpg)) +
+  geom_point()
+
+p2 <- mtcars %>%
+  ggplot(aes(qsec, mpg)) +
+  geom_point()
+
+plot_grid(p1, p2, labels = c('A', 'B'), label_size = 12)
+
+p3 <- ~plot(mtcars$qsec, mtcars$mpg)
+
+plot_grid(p1, p3, labels = c('A', 'B'), label_size = 12)
+```
+
+#### Generic plot annotations
+
+```{r}
+p4 <- mtcars %>% 
+  ggplot(aes(disp, mpg)) +
+  geom_point(size = 1.5, color = "blue") +
+  theme_cowplot(12)
+
+logo_file <- system.file("extdata", "logo.png", package = "cowplot")
+
+ggdraw(p4) +
+  draw_image(
+    logo_file,
+    x     = 1,
+    y     = 1,
+    hjust = 1,
+    vjust = 1,
+    width = 0.13,
+    height = 0.2
+  )
+
+ggdraw() + 
+  draw_image(logo_file, scale = 0.5) +
+  draw_plot(p4)
+```
+
+### ggpubr - ‘ggplot2’ Based Publication Ready Plots
+
+Original from: https://rpkgs.datanovia.com/ggpubr/
+
+#### Distribution
+
+```{r}
+library(ggpubr)
+
+set.seed(1234)
+
+wdata <- tibble(
+  sex    = factor(rep(c("F", "M"), each = 200)),
+  weight = c(rnorm(200, 55), rnorm(200, 58)))
+
+wdata %>% 
+  ggdensity(
+    x       = "weight",
+    add     = "mean",
+    rug     = TRUE,
+    color   = "sex",
+    fill    = "sex",
+    palette = c("#00AFBB", "#E7B800")
+  )
+
+wdata %>% 
+  gghistogram(
+    x       = "weight",
+    add     = "mean",
+    rug     = TRUE,
+    color   = "sex",
+    fill    = "sex",
+    palette = c("#00AFBB", "#E7B800")
+  )
+```
+
+#### Box and violin plots
+
+```{r}
+tbl <- ToothGrowth
+
+p <- tbl %>% 
+  ggboxplot(
+    x       = "dose",
+    y       = "len",
+    color   = "dose",
+    palette = c("#00AFBB", "#E7B800", "#FC4E07"),
+    add     = "jitter",
+    shape   = "dose"
+  )
+
+p
+
+# Add p-values comparing groups
+my_comparisons <- list( c("0.5", "1"), c("1", "2"), c("0.5", "2") )
+
+p +
+  # Add pairwise comparisons p-value
+  stat_compare_means(comparisons = my_comparisons) + 
+  # Add global p-value
+  stat_compare_means(label.y = 50)
+```
+
+```{r}
+tbl %>% 
+  ggviolin(
+    x         = "dose",
+    y         = "len",
+    fill      = "dose",
+    palette   = c("#00AFBB", "#E7B800", "#FC4E07"),
+    add       = "boxplot", 
+    add.params = list(fill = "white")
+  ) +
+  # Add significance levels
+  stat_compare_means(comparisons = my_comparisons, label = "p.signif") + 
+  # Add global the p-value
+  stat_compare_means(label.y = 50)
+```
+#### Bar plots
+
+```{r}
+tbl <- mtcars %>% 
+  as_tibble(rownames = "rowname") %>% 
+  rename("name" = "rowname") %>% 
+  mutate(cyl = as.factor(cyl))
+
+tbl
+```
+
+```{r}
+tbl %>% 
+  ggbarplot(
+    x              = "name",
+    y              = "mpg",
+    fill           = "cyl",
+    color          = "white",
+    palette        = "jco",         
+    sort.val       = "asc",
+    sort.by.groups = FALSE,
+    rotate         = TRUE
+  )
+
+tbl %>% 
+  ggbarplot(
+    x              = "name",
+    y              = "mpg",
+    fill           = "cyl",
+    color          = "white",
+    palette        = "jco",         
+    sort.val       = "asc",
+    sort.by.groups = TRUE,
+    rotate         = TRUE
+  )
+```
+
+```{r}
+# Calculate the z-score of the mpg data
+tbl2 <- tbl %>%
+  mutate(
+    mpg_z   = (mpg - mean(mpg)) / sd(mpg),
+    mpg_grp = case_when(
+      mpg_z < 0 ~ "low",
+      TRUE      ~ "high"
+    ) %>% 
+      as_factor() %>%
+      fct_relevel("low", "high")
+  )
+
+tbl2
+```
+
+```{r}
+tbl2 %>% 
+  ggbarplot(
+    x              = "name",
+    y              = "mpg_z",
+    fill           = "mpg_grp",
+    color          = "white",
+    palette        = "jco",       
+    sort.val       = "asc",
+    sort.by.groups = FALSE,
+    ylab           = "MPG z-score",
+    xlab           = FALSE,
+    legend.title   = "MPG Group",
+    rotate         = TRUE
+  )
+
+tbl2 %>% 
+  ggbarplot(
+    x              = "name",
+    y              = "mpg_z",
+    fill           = "mpg_grp",
+    color          = "white",
+    palette        = "jco",       
+    sort.val       = "asc",
+    sort.by.groups = FALSE,
+    ylab           = "MPG z-score",
+    xlab           = FALSE,
+    legend.title   = "MPG Group",
+    rotate         = TRUE,
+    ggtheme        = theme_minimal()
+  )
+```
+
+#### Dot charts
+
+```{r}
+tbl %>% 
+  ggdotchart(
+    x              = "name",
+    y              = "mpg",
+    color          = "cyl",
+    palette        = c("#00AFBB", "#E7B800", "#FC4E07"),
+    sorting        = "descending",
+    add            = "segments",  
+    ggtheme        = theme_pubr(),
+    rotate         = TRUE
+  )
+
+tbl %>% 
+  ggdotchart(
+    x              = "name",
+    y              = "mpg",
+    color          = "cyl",
+    palette        = c("#00AFBB", "#E7B800", "#FC4E07"),
+    sorting        = "descending",
+    add            = "segments",
+    rotate         = TRUE,
+    group          = "cyl",
+    dot.size       = 6,
+    label          = round(tbl$mpg),
+    font.label     = list(color = "white", size = 9, vjust = 0.5),
+    ggtheme        = theme_pubr()
+  )
+
+tbl2 %>% 
+  ggdotchart(
+    x              = "name",
+    y              = "mpg_z",
+    color          = "cyl",
+    palette        = c("#00AFBB", "#E7B800", "#FC4E07"),
+    sorting        = "ascending",
+    add            = "segments",
+    add.params     = list(color = "lightgray", size = 2),
+    rotate         = TRUE,
+    group          = "cyl",
+    dot.size       = 8,
+    label          = round(tbl2$mpg_z, 1),
+    font.label     = list(color = "white", size = 9, vjust = 0.5),
+    ggtheme        = theme_pubr()
+  ) +
+  geom_hline(yintercept = 0, linetype = 2, color = "lightgray")
+
+tbl %>%
+  ggdotchart(
+    x              = "name",
+    y              = "mpg",
+    color          = "cyl",
+    palette        = c("#00AFBB", "#E7B800", "#FC4E07"),
+    sorting        = "descending",
+    rotate         = TRUE,
+    dot.size       = 2,
+    y.text.col     = TRUE,
+    ggtheme        = theme_pubr()
+  ) +
+  theme_cleveland()
+
+```
