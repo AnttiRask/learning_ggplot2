@@ -1,0 +1,593 @@
+---
+title: "Wickham, Hadley - ggplot2: Elegant Graphics for Data Analysis (2nd ed.), Chapter 10 - Data Transformation"
+author: "Original Code: Hadley Wickham | Modifications: Antti Rask"
+date: "2023-01-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 10 Data Transformation
+
+```{r}
+library(tidyverse)
+library(conflicted)
+  conflict_prefer("filter", "dplyr")
+  conflict_prefer("select", "dplyr")
+```
+
+## 10.2 Filter Observations
+
+```{r}
+diamonds %>% 
+  ggplot(aes(x, y)) +
+  geom_bin2d()
+```
+
+
+```{r}
+diamonds %>% 
+  filter(x == 0 | y == 0)
+```
+
+```{r}
+diamonds_ok <- diamonds %>%
+  filter(x > 0, y > 0, y < 20)
+
+diamonds_ok %>% 
+  ggplot(aes(x, y)) +
+  geom_bin2d() +
+  geom_abline(slope = 1, color = "white", linewidth = 1, alpha = 0.5)
+```
+
+### 10.2.2 Missing Values
+
+```{r}
+x <- c(1, NA, 2)
+
+x == 1
+
+x > 2
+
+x + 10
+```
+
+```{r}
+# Don't do this!
+x == NA
+x != NA
+
+# Do this instead!
+is.na(x)
+```
+
+### 10.2.3 Exercises
+
+1.
+```{r}
+diamonds %>% 
+  filter(x == y)
+
+diamonds %>% 
+  filter(depth %>% between(55, 70)) %>% 
+  arrange(desc(depth))
+
+diamonds %>% 
+  filter(carat < carat %>% median()) %>% 
+  arrange(desc(carat))
+
+diamonds %>%
+  filter(price / carat > 10000) %>% 
+  mutate(price_per_carat = price / carat) %>% 
+  arrange(price_per_carat)
+
+diamonds %>% 
+  filter(cut >= "Good")
+```
+
+2.
+```{r}
+x <- c(TRUE, FALSE, NA)
+
+x
+
+!x
+
+is.na(x)
+
+!is.na(x)
+
+x | is.na(x)
+
+!x | is.na(x)
+```
+
+3.
+```{r}
+diamonds %>% 
+  ggplot(aes(x, z)) +
+  geom_bin2d()
+
+diamonds %>% 
+  ggplot(aes(y, z)) +
+  geom_bin2d()
+
+diamonds_ok <- diamonds %>%
+  filter(x > 0, y > 0, z > 0, y < 20, z < 10)
+
+diamonds_ok %>%
+  ggplot(aes(x, z)) +
+  geom_bin2d() +
+  geom_smooth(
+    method    = "lm",
+    se        = FALSE,
+    color     = "white",
+    linewidth = 1,
+    alpha     = 0.5
+  )
+
+diamonds_ok %>%
+  ggplot(aes(y, z)) +
+  geom_bin2d() +
+  geom_smooth(
+    method    = "lm",
+    se        = FALSE,
+    color     = "white",
+    linewidth = 1,
+    alpha     = 0.5
+  )
+```
+
+4.
+```{r}
+library(ggplot2movies)
+
+movies
+
+movies %>%
+  summary()
+
+movies %>%
+  ggplot(aes(year, color = is.na(budget))) +
+  geom_freqpoly()
+
+movies %>%
+  ggplot(aes(rating, color = is.na(budget))) +
+  geom_freqpoly()
+```
+
+5.
+```{r}
+NA & FALSE
+
+NA | TRUE
+
+NA * 0
+
+NA ^ 0
+```
+
+## 10.3 Create New Variables
+
+```{r}
+diamonds_ok2 <- diamonds_ok %>%
+  mutate(
+    sym  = x - y,
+    size = sqrt(x ^ 2 + y ^ 2)
+  )
+
+diamonds_ok2
+```
+
+```{r}
+diamonds_ok2 %>%
+  ggplot(aes(size, sym)) +
+  stat_bin2d()
+
+diamonds_ok2 %>% 
+  ggplot(aes(abs(sym))) +
+  geom_histogram(binwidth = 0.1)
+
+diamonds_ok2 %>%
+  filter(abs(sym) < 0.2) %>% 
+  ggplot(aes(abs(sym))) +
+  geom_histogram(binwidth = 0.01)
+```
+
+### 10.3.2 Exercises
+
+1.
+```{r}
+diamonds %>% 
+  mutate(
+    volume  = x * y * z * (2/3),
+    density = carat * 0.2 / volume
+  )
+
+diamonds %>%
+  mutate(price_per_carat = price / carat)
+
+diamonds %>%
+  mutate(
+    lcarat = log(carat),
+    lprice = log(price)
+  )
+```
+
+2.
+```{r}
+diamonds %>%
+  ggplot(aes(x, z)) +
+  stat_bin2d()
+
+diamonds %>%
+  ggplot(aes(log(x), log(z))) +
+  stat_bin2d()
+```
+
+3.
+```{r}
+diamonds %>%
+  mutate(
+    depth_real = round(z / ((x + y) / 2) * 100),
+    depth_diff = depth - depth_real
+  ) %>%
+  select(depth, depth_real, depth_diff) %>% 
+  filter(depth_real < 200) %>%
+  ggplot(aes(depth_real, depth)) +
+  geom_point()
+```
+
+4.
+```{r}
+diamonds %>%
+  filter(x > y) %>%
+  ggplot(aes(x)) +
+  geom_histogram(binwidth = 0.2)
+
+diamonds %>%
+  filter(y > x) %>%
+  ggplot(aes(x)) +
+  geom_histogram(binwidth = 0.2)
+```
+
+## 10.4 Group-wise Summaries
+
+```{r}
+sum_clarity <- diamonds %>% 
+  summarize(
+    price = mean(price),
+    .by   = clarity
+  )
+
+sum_clarity
+```
+
+```{r}
+p <- sum_clarity %>% 
+  ggplot(aes(clarity, price))
+
+p +
+  geom_col()
+
+p +
+  geom_point()
+```
+
+```{r}
+# It's clearer to tell explicitly with the .by argument that this summarization has been made with two groups (cut and depth) and the next one with one (cut)
+
+cut_depth <- diamonds %>%
+  summarize(
+    n   = n(),
+    .by = c(cut, depth)
+  ) %>% 
+  filter(between(depth, 55, 70))
+
+cut_depth
+```
+
+```{r}
+cut_depth %>% 
+  ggplot(aes(depth, n, color = cut)) +
+  geom_line()
+```
+
+```{r}
+cut_depth %>% 
+  mutate(
+    prop = n / sum(n),
+    .by  = cut
+  ) %>%
+  ggplot(aes(depth, prop, color = cut)) +
+  geom_line()
+```
+
+### 10.4.1 Useful Tools
+
+```{r}
+diamonds %>% 
+  summarize(
+    n_big      = sum(carat >= 4),
+    prop_cheap = mean(price < 1000)
+  )
+```
+
+### 10.4.2 Statistical Considerations
+
+```{r}
+by_clarity <- diamonds %>%
+  summarize(
+    n    = n(),
+    mean = mean(price),
+    lq   = quantile(price, 0.25),
+    uq   = quantile(price, 0.75),
+    .by  = clarity
+  )
+
+by_clarity
+```
+
+```{r}
+by_clarity %>% 
+  ggplot(aes(clarity, mean)) +
+  geom_linerange(aes(ymin = lq, ymax = uq)) +
+  geom_point(aes(size = n))
+```
+
+```{r}
+data(Batting, package = "Lahman")
+
+Batting
+
+ba <- Batting %>% 
+  filter(AB > 0) %>% 
+  summarize(
+    ba  = sum(H, na.rm = TRUE) / sum(AB, na.rm = TRUE),
+    .by = playerID 
+  )
+
+ba
+```
+
+```{r}
+ba %>% 
+  ggplot(aes(ba)) +
+  geom_histogram(binwidth = 0.01)
+```
+
+```{r}
+ba <- Batting %>% 
+  filter(AB > 0) %>% 
+  summarize(
+    ba  = sum(H, na.rm = TRUE) / sum(AB, na.rm = TRUE),
+    ab  = sum(AB, na.rm = TRUE),
+    .by = playerID
+  )
+
+ba %>% 
+  ggplot(aes(ab, ba)) +
+  geom_bin2d(bins = 100) +
+  geom_smooth()
+
+ba %>%
+  filter(ab >= 10) %>% 
+  ggplot(aes(ab, ba)) +
+  geom_bin2d() +
+  geom_smooth()
+```
+
+### 10.4.3 Exercises
+
+1.
+```{r}
+movies_with_budget <- movies %>% 
+  mutate(
+    budget_known = case_when(
+      is.na(budget) ~ FALSE,
+      TRUE          ~ TRUE
+    )
+  ) %>%
+  summarize(
+    has_budget     = sum(budget_known),
+    total          = n(),
+    prop_no_budget = 1 - has_budget / total,
+    .by            = year
+  )
+
+movies_with_budget %>% 
+  ggplot(aes(year, prop_no_budget)) +
+  geom_area()
+```
+
+2.
+```{r}
+by_avg_length <- movies %>% 
+  summarize(
+    n    = n(),
+    mean = mean(length),
+    lq   = quantile(length, 0.25),
+    uq   = quantile(length, 0.75),
+    .by  = year
+  )
+
+by_avg_length
+
+by_avg_length %>% 
+  ggplot(aes(year, mean)) +
+  geom_linerange(aes(ymin = lq, ymax = uq)) +
+  geom_point()
+```
+
+3.
+```{r}
+diamonds2 <- diamonds %>% 
+  summarize(
+    number    = n(),
+    avg_price = mean(price),
+    avg_size  = mean(depth),
+    .by       = cut
+  )
+
+diamonds2
+
+# By cut
+diamonds %>%
+  ggplot(aes(cut)) +
+  geom_bar() +
+  ggtitle("Number of diamonds in each cut")
+
+diamonds2 %>%
+  ggplot(aes(cut, avg_price)) +
+  geom_bar(stat = "identity") +
+  ggtitle("Average Price of Each Cut")
+
+diamonds2 %>%
+  ggplot(aes(cut, avg_size)) +
+  geom_bar(stat = "identity") +
+  ggtitle("Average Size of Each Cut")
+
+# By color
+diamonds3 <- diamonds %>% 
+  summarize(
+    number    = n(),
+    avg_price = mean(price),
+    avg_size  = mean(depth),
+    .by       = color
+  )
+
+diamonds %>%
+  ggplot(aes(color)) +
+  geom_bar() +
+  ggtitle("Number of diamonds in Each Color")
+
+diamonds3 %>%
+  ggplot(aes(color, avg_price)) +
+  geom_bar(stat = "identity") +
+  ggtitle("Average Price of Each Color")
+
+diamonds3 %>%
+  ggplot(aes(color, avg_size)) +
+  geom_bar(stat = "identity") +
+  ggtitle("Average Size of Each Color")
+
+# By clarity
+
+diamonds4 <- diamonds %>%
+  summarise(
+    number    = n(),
+    avg_price = mean(price),
+    avg_size  = mean(depth),
+    .by       = clarity
+  )
+
+diamonds %>%
+  ggplot(aes(clarity)) +
+  geom_bar() +
+  ggtitle("Number of diamonds in Each Clarity")
+
+diamonds4 %>%
+  ggplot(aes(clarity, avg_price)) +
+  geom_bar(stat = "identity") +
+  ggtitle("Average Price of Each Clarity")
+
+diamonds4 %>%
+  ggplot(aes(clarity, avg_size)) +
+  geom_bar(stat = "identity") +
+  ggtitle("Average Size of Each Clarity")
+```
+
+4.
+```{r}
+# Version 1
+diamonds %>% 
+  group_by(
+    cut = cut(
+      carat,
+      seq(
+        min(carat),
+        max(carat),
+        by = 0.1
+      )
+    )
+  ) %>% 
+  summarize(count = n()) %>% 
+  ungroup() %>% 
+  ggplot(aes(cut, count)) +
+  geom_bar(stat = "identity")
+
+
+
+# Version 2
+n <- round((max(diamonds$carat) - min(diamonds$carat)) / 0.1)
+
+diamonds %>% 
+  group_by(cut = cut_interval(carat, n = n, width = 0.1)) %>% 
+  summarize(count = n()) %>% 
+  ungroup %>% 
+  ggplot(aes(cut, count)) +
+  geom_bar(stat = "identity")
+
+# Original
+diamonds %>% 
+  ggplot(aes(carat)) +
+  geom_histogram(binwidth = 0.1)
+```
+
+## 10.5 Transformation Pipelines
+
+```{r}
+# Don't do this!
+cut_depth <- group_by(diamonds, cut, depth)
+cut_depth <- summarize(cut_depth, n = n())
+cut_depth <- filter(cut_depth, depth > 55, depth < 70)
+cut_depth <- mutate(cut_depth, prop = n / sum(n)) %>%
+  ungroup()
+
+cut_depth
+
+# Don't do this!
+mutate(
+  filter(
+    summarize(
+      group_by(
+        diamonds,
+        cut,
+        depth
+      ),
+      n = n()
+    ),
+    depth > 55,
+    depth < 70
+  ),
+  prop = n / sum(n)
+) %>%
+  ungroup()
+
+# Do this instead!
+cut_depth_2 <- diamonds %>% 
+  group_by(cut, depth) %>% 
+  summarize(n = n()) %>% 
+  filter(depth > 55, depth < 70) %>% 
+  mutate(prop = n / sum(n)) %>%
+  ungroup()
+
+cut_depth_2
+```
+
+### 10.5.1 Exercises
+
+2.
+```{r}
+library(magrittr)
+
+x <- runif(100)
+
+x %>% 
+  subtract(mean(.)) %>% 
+  raise_to_power(2) %>% 
+  mean() %>% 
+  sqrt()
+```

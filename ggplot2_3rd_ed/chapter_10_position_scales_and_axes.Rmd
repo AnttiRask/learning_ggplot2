@@ -1,0 +1,584 @@
+---
+title: "Wickham, Hadley - ggplot2: Elegant Graphics for Data Analysis (3rd ed.), Chapter 10 - Position scales and axes"
+author: "Original Code: Hadley Wickham | Modifications: Antti Rask"
+date: "2023-01-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 10 Position scales and axes
+
+```{r}
+library(tidyverse)
+library(conflicted)
+  conflict_prefer("filter", "dplyr")
+  conflict_prefer("select", "dplyr")
+```
+
+```{r}
+mpg %>%
+  ggplot(aes(displ)) +
+  geom_histogram()
+
+mpg %>%
+  ggplot(aes(displ, after_stat(count))) +
+  geom_histogram()
+```
+
+## 10.1 Numeric position scales
+
+### 10.1.1 Limits
+
+```{r}
+ggplot(mpg, aes(displ, hwy)) + 
+  geom_point() +
+  facet_wrap(vars(year))
+
+base_99 <- mpg %>%
+  filter(year == 1999) %>%
+  ggplot(aes(displ, hwy)) +
+  geom_point() 
+
+base_08 <- mpg %>% filter(year == 2008) %>%
+  ggplot(aes(displ, hwy)) +
+  geom_point() 
+
+base_99
+base_08
+```
+
+```{r}
+base_99 + 
+  scale_x_continuous(limits = c(1, 7)) +
+  scale_y_continuous(limits = c(10, 45))
+
+base_08 + 
+  scale_x_continuous(limits = c(1, 7)) +
+  scale_y_continuous(limits = c(10, 45))
+```
+
+```{r}
+base_99 +
+  lims(x = c(1, 7), y = c(10, 45)
+  )
+
+base_08 +
+  lims(x = c(1, 7), y = c(10, 45))
+```
+
+### 10.1.2 Zooming in
+
+```{r}
+base <- ggplot(mpg, aes(drv, hwy)) + 
+  geom_hline(yintercept = 28, colour = "red") + 
+  geom_boxplot() 
+
+base +
+  labs(title = "base")
+
+# works as expected
+base +
+  coord_cartesian(ylim = c(10, 35)) +
+  labs(title = "coord_cartesian(ylim = c(10, 35))")
+
+# distorts the boxplot, avoid!
+base +
+  ylim(10, 35) +
+  labs(title = "ylim(10, 35)")
+```
+
+### 10.1.3 Visual range expansion
+
+```{r}
+p <- faithfuld %>% 
+  ggplot(aes(waiting, eruptions)) +
+  geom_raster(aes(fill = density)) +
+  theme(legend.position = "none") +
+  labs(
+    x = NULL,
+    y = NULL
+  )
+
+p
+
+p +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0))
+
+# Alternatively
+p +
+  scale_x_continuous(expand = expansion(0)) +
+  scale_y_continuous(expand = expansion(0))
+```
+
+```{r}
+# Additive expansion of three units on both axes
+p + 
+  scale_x_continuous(expand = expansion(add = 3)) + 
+  scale_y_continuous(expand = expansion(add = 3))
+
+# Multiplicative expansion of 20% on both axes
+p + 
+  scale_x_continuous(expand = expansion(mult = .2)) + 
+  scale_y_continuous(expand = expansion(mult = .2)) 
+
+# Multiplicative expansion of 5% at the lower end of each axes, and 20% at the upper end; for the y-axis the expansion is set directly instead of using expansion()
+p + 
+  scale_x_continuous(
+    expand = expansion(mult = c(.05, .2))
+  ) + 
+  scale_y_continuous(
+    expand = c(.05, 0, .2, 0)
+  )
+```
+
+### 10.1.4 Breaks
+
+```{r}
+toy <- tibble(
+  const = 1,
+  up    = 1:4,
+  txt   = letters[1:4],
+  big   = (1:4) * 1000,
+  log   = c(2, 5, 10, 2000)
+)
+
+toy
+```
+
+```{r}
+base <- toy %>% ggplot(aes(big, const)) + 
+  geom_point() + 
+  labs(
+    x = NULL,
+    y = NULL
+  ) +
+  scale_y_continuous(breaks = NULL) 
+
+base
+```
+
+```{r}
+library(scales)
+
+base +
+  scale_x_continuous(breaks = c(1000, 2000, 4000)) +
+  labs(title = "scale_x_continuous(breaks = c(1000, 2000, 4000))")
+
+base +
+  scale_x_continuous(breaks = c(1000, 1500, 2000, 4000)) +
+  labs(title = "scale_x_continuous(breaks = c(1000, 1500, 2000, 4000))")
+
+# same as the base
+base +
+  scale_x_continuous(breaks = breaks_extended()) +
+  labs(title = "scale_x_continuous(breaks = breaks_extended()) (same as base)")
+
+base + 
+  scale_x_continuous(breaks = breaks_extended(n = 2)) +
+  labs(title = "breaks = breaks_extended(n = 2)")
+```
+
+```{r}
+library(scales)
+
+base + 
+  scale_x_continuous(breaks = breaks_width(800)) +
+  labs(title = "scale_x_continuous(breaks = breaks_width(800))")
+
+base + 
+  scale_x_continuous(
+    breaks = breaks_width(800, offset = 200)
+  ) +
+  labs(title = "scale_x_continuous(breaks = breaks_width(800, offset = 200))")
+
+base + 
+  scale_x_continuous(
+    breaks = breaks_width(800, offset = -200)
+  ) +
+  labs(title = "scale_x_continuous(breaks = breaks_width(800, offset = -200))")
+```
+
+### 10.1.5 Minor breaks
+
+```{r}
+mb <- unique(as.numeric(1:10 %o% 10 ^ (0:3)))
+mb
+```
+
+```{r}
+base <- toy %>% 
+  ggplot(aes(log, const)) + 
+  geom_point() + 
+  labs(
+    x = NULL,
+    y = NULL
+  ) +
+  scale_y_continuous(breaks = NULL)
+
+base +
+  scale_x_log10() +
+  labs(title = "scale_x_log10()")
+
+base +
+  scale_x_log10(minor_breaks = mb) +
+  labs(title = "scale_x_log10(minor_breaks = mb)")
+```
+
+### 10.1.6 Labels
+
+```{r}
+base <- toy %>% ggplot(aes(big, const)) + 
+  geom_point() + 
+  labs(
+    x = NULL,
+    y = NULL
+  ) +
+  scale_y_continuous(breaks = NULL)
+
+base
+
+base + 
+  scale_x_continuous(
+    breaks = c(2000, 4000), 
+    labels = c("2k", "4k")
+  ) 
+```
+
+```{r}
+library(scales)
+
+base <- toy %>% 
+  ggplot(aes(big, const)) + 
+  geom_point() + 
+  labs(
+    x = NULL,
+    y = NULL
+  ) +
+  scale_x_continuous(breaks = NULL)
+
+base
+
+base +
+  scale_y_continuous(labels = label_percent()) +
+  labs(title = "scale_y_continuous(labels = label_percent())")
+
+base +
+  scale_y_continuous(labels = label_dollar(prefix = "", suffix = "€")) +
+  labs(title = 'scale_y_continuous(labels = label_dollar(prefix = "", suffix = "€"))')
+
+base +
+  scale_y_continuous(breaks = NULL) +
+  labs(title = "scale_y_continuous(breaks = NULL)")
+
+base +
+  scale_y_continuous(labels = NULL) +
+  labs(title = "scale_y_continuous(labels = NULL)")
+```
+
+### 10.1.7 Transformations
+
+```{r}
+base <- mpg %>% 
+  ggplot(aes(displ, hwy)) +
+  geom_point()
+
+base
+
+base +
+  scale_x_reverse()
+
+base +
+  scale_y_reverse()
+```
+
+```{r}
+# Convert from fuel economy to fuel consumption
+mpg %>% 
+  ggplot(aes(displ, hwy)) +
+  geom_point() +
+  scale_y_continuous(trans = "reciprocal")
+
+# Log transform x and y axes
+diamonds %>% 
+  ggplot(aes(price, carat)) +
+  geom_bin2d() +
+  scale_x_continuous(trans = "log10") +
+  scale_y_continuous(trans = "log10")
+```
+
+```{r}
+library(scales)
+
+# The following are equivalent
+p <- ggplot(mpg, aes(displ, hwy)) + 
+  geom_point()
+
+p + 
+  scale_y_continuous(trans = "reciprocal")
+
+p + 
+  scale_y_continuous(trans = reciprocal_trans())
+```
+
+```{r}
+# The following are equivalent
+
+p <- diamonds %>%
+  ggplot(aes(price, carat)) + 
+  geom_bin2d()
+
+p +
+  scale_x_continuous(trans = "log10") +
+  scale_y_continuous(trans = "log10")
+
+p + 
+  scale_x_log10() +
+  scale_y_log10()
+```
+
+```{r}
+# These two are similar, but there are minor differences in the tick labels
+
+# manual transformation
+mpg %>% 
+  ggplot(aes(log10(displ), hwy)) + 
+  geom_point()
+
+# transform using scales
+mpg %>%
+  ggplot(aes(displ, hwy)) +
+  geom_point() + 
+  scale_x_log10()
+```
+
+## 10.2 Data-time position scales
+
+### 10.2.1 Breaks
+
+```{r}
+date_base <- economics %>% 
+  ggplot(aes(date, psavert)) +
+  geom_line(na.rm = TRUE) +
+  labs(
+    x = NULL,
+    y = NULL
+  )
+
+date_base
+
+date_base +
+  scale_x_date(date_breaks = "15 years")
+```
+
+```{r}
+library(lubridate)
+library(scales)
+
+the_year   <- as_date(c("2021-01-01", "2021-12-31"))
+
+set_breaks <- breaks_width("1 month")
+
+set_breaks(the_year)
+```
+
+```{r}
+library(scales)
+
+set_breaks <- breaks_width("1 month", offset = 8)
+
+set_breaks(the_year)
+```
+
+### 10.2.2 Minor breaks
+
+```{r}
+library(lubridate)
+
+tbl <- tibble(y = as_date(c("2022-01-01", "2022-04-01")))
+
+base <- tbl %>% 
+  ggplot(aes(y = y)) +
+  labs(y = NULL) +
+  theme_minimal() + 
+  theme(
+    panel.grid.major = element_line(colour = "black"),
+    panel.grid.minor = element_line(colour = "grey50")
+  )
+
+base +
+  scale_y_date(date_breaks = "1 month")
+
+base + 
+  scale_y_date(date_breaks = "1 month", date_minor_breaks = "1 week")
+```
+
+### 10.2.3 Labels
+
+```{r}
+library(lubridate)
+library(scales)
+
+base <- economics %>% 
+  ggplot(aes(date, psavert)) +
+  geom_line(na.rm = TRUE) +
+  labs(
+    x = NULL,
+    y = NULL
+  )
+
+base +
+  scale_x_date(
+    date_breaks = "5 years"
+  )
+
+base +
+  scale_x_date(
+    date_breaks = "5 years",
+    date_labels = "%y"
+  )
+
+Sys.setlocale(category = "LC_ALL", locale = "us")
+
+lim <- as_date(c("2004-01-01", "2005-01-01"))
+
+base +
+  scale_x_date(limits = lim, date_labels = "%b %y")
+
+base +
+  scale_x_date(limits = lim, date_labels = "%B\n%Y")
+
+base + 
+  scale_x_date(
+    limits = lim, 
+    labels = label_date_short()
+  )
+```
+
+## 10.3 Discrete position scales
+
+```{r}
+p <- mpg %>%
+  ggplot(aes(hwy, class)) + 
+  geom_point()
+
+# These two are equivalent
+p
+
+p +
+  scale_x_continuous() +
+  scale_y_discrete()
+
+# To add annotation
+p +
+  annotate("text", x = 5, y = 1:7, label = 1:7)
+
+# To add jitter
+
+mpg %>%
+  ggplot(aes(hwy, class)) + 
+  geom_jitter(width = 0, height = .25) +
+  annotate("text", x = 5, y = 1:7, label = 1:7)
+```
+
+```{r}
+p <- mpg %>% 
+  ggplot(aes(x = drv, y = hwy)) 
+
+p + 
+  geom_boxplot()
+
+p +
+  geom_boxplot(width = .4)
+```
+
+### 10.3.1 Limits, breaks, and labels
+
+```{r}
+base <- toy %>% 
+  ggplot(aes(const, txt, label = txt)) + 
+  geom_label() +
+  scale_x_continuous(breaks = NULL) +
+  labs(
+    x = NULL,
+    y = NULL
+  )
+
+base 
+
+base +
+  scale_y_discrete(limits = c("a", "b", "c", "d", "e")) +
+  labs(title = 'scale_y_discrete(limits = c("a", "b", "c", "d", "e"))')
+
+base +
+  scale_y_discrete(limits = c("d", "c", "a", "b")) +
+  labs(title = 'scale_y_discrete(limits = c("d", "c", "a", "b"))')
+
+base +
+  scale_y_discrete(breaks = c("b", "c")) +
+  labs(title = 'scale_y_discrete(breaks = c("b", "c"))')
+
+base +
+  scale_y_discrete(labels = c(c = "carrot", b = "banana")) +
+  labs(title = 'scale_y_discrete(labels = c(c = "carrot", b = "banana"))')
+```
+
+### 10.3.2 Label positions
+
+```{r}
+base <- mpg %>%
+  # It's nicer to look at these in order so I added this mutation before going to ggplot
+  mutate(manufacturer = factor(manufacturer) %>% fct_reorder(hwy)) %>%
+  ggplot(aes(manufacturer, hwy)) +
+  geom_boxplot() +
+  labs(x = "manufacturer")
+
+base
+
+# These two do the same thing
+base +
+  guides(x = guide_axis(n.dodge = 3))
+
+base +
+  scale_x_discrete(guide = guide_axis(n.dodge = 3))
+
+# These two do the same thing
+base +
+  guides(x = guide_axis(angle = 90))
+
+base +
+  scale_x_discrete(guide = guide_axis(angle = 90))
+
+# You can always flip the axes
+base +
+  coord_flip()
+```
+
+## 10.4 Binned position scales
+
+```{r}
+p <- mpg %>%
+  ggplot(aes(hwy)) 
+
+p +
+  geom_histogram(bins = 8)
+
+p + 
+  geom_bar() +
+  scale_x_binned()
+```
+
+```{r}
+base <- mpg %>% 
+  ggplot(aes(displ, hwy)) + 
+  geom_count()
+
+base
+
+base + 
+  scale_x_binned(n.breaks = 15) +
+  scale_y_binned(n.breaks = 15)
+```
