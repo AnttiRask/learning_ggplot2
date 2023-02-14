@@ -631,9 +631,12 @@ mi_cities %>%
 
 ### 3.7.3 Raster Images
 
-Both the old and new examples had problems (which I opened an GitHub issue about)...
+There was a problem with the {bomrang} package and it has been archived. So, the example code for the 3rd
+edition doesn't work as it is.
 
-So, let's try one this instead: https://tmieno2.github.io/R-as-GIS-for-Economists/create-maps.html
+I opened an issue about it (https://github.com/hadley/ggplot2-book/issues/338#issuecomment-1422203499), but so far there is no idea how Hadley & co. are going to replace the chapter.
+
+While waiting for the update, I'll include another example: https://tmieno2.github.io/R-as-GIS-for-Economists/create-maps.html
 
 #### 3.7.3.1 Creating maps from sf objects
 
