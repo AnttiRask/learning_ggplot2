@@ -1,0 +1,768 @@
+---
+title: "Wickham, Hadley - ggplot2: Elegant Graphics for Data Analysis (3rd ed.), Chapter 11 - Colour scales and legends"
+author: "Original Code: Hadley Wickham | Modifications: Antti Rask"
+date: "2023-01-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 11 Colour scales and legends
+
+```{r}
+library(tidyverse)
+library(conflicted)
+  conflict_prefer("filter", "dplyr")
+  conflict_prefer("select", "dplyr")
+```
+
+## 11.1 A little colour theory
+
+### 11.1.1 Colour blindness
+
+```{r}
+library(colorBlindness)
+library(viridis)
+
+displayAllColors(rainbow(6))
+
+displayAllColors(viridis(6))
+```
+
+## 11.2 Continuous colour scales
+
+```{r}
+library(munsell)
+
+erupt <- faithfuld %>%
+  ggplot(aes(waiting, eruptions, fill = density)) +
+  geom_raster() +
+  scale_x_continuous(NULL, expand = c(0, 0)) +
+  scale_y_continuous(NULL, expand = c(0, 0)) +
+  theme(legend.position = "none")
+
+# This is extra (from the 2nd edition)
+
+erupt
+
+erupt +
+  scale_fill_gradient(
+    low = "white",
+    high = "black"
+  )
+
+erupt +
+  scale_fill_gradient(
+    low  = mnsl("5G 9/2"),
+    high = mnsl("5G 6/8")
+  )
+```
+
+### 11.2.1 Particular palettes
+
+```{r}
+library(paletteer)
+library(scico)
+library(viridis)
+
+erupt
+
+erupt +
+  scale_fill_viridis_c() +
+  labs(title = "scale_fill_viridis_c()")
+
+erupt +
+  scale_fill_viridis_c(option = "magma") +
+  labs(title = 'scale_fill_viridis_c(option = "magma")')
+
+erupt +
+  scale_fill_distiller() +
+  labs(title = "scale_fill_distiller()")
+
+erupt +
+  scale_fill_distiller(palette = "RdPu") +
+  labs(title = 'scale_fill_distiller(palette = "RdPu")')
+
+erupt +
+  scale_fill_distiller(palette = "YlOrBr") +
+  labs(title = 'scale_fill_distiller(palette = "YlOrBr")')
+
+# The default
+erupt +
+  scale_fill_scico(palette = "bilbao") +
+  labs(title = 'scale_fill_scico(palette = "bilbao")')
+
+erupt +
+  scale_fill_scico(palette = "vik") +
+  labs(title = 'scale_fill_scico(palette = "vik")')
+
+erupt +
+  scale_fill_scico(palette = "lajolla") +
+  labs(title = 'scale_fill_scico(palette = "lajolla")')
+
+erupt + 
+  scale_fill_paletteer_c("viridis::plasma") +
+  labs(title = 'scale_fill_paletteer_c("viridis::plasma")')
+
+erupt +
+  scale_fill_paletteer_c("scico::tokyo") +
+  labs(title = 'scale_fill_paletteer_c("scico::tokyo")')
+```
+
+### 11.2.2 Robust recipes
+
+```{r}
+# These all produce the same plot
+
+erupt
+
+erupt +
+  scale_fill_continuous()
+
+erupt +
+  scale_fill_gradient()
+```
+
+```{r}
+erupt + 
+  scale_fill_gradient(low = "grey", high = "brown") +
+  labs(
+    title = 'scale_fill_gradient(low = "grey", high = "brown")')
+
+erupt + 
+  scale_fill_gradient2(
+    low      = "grey", 
+    mid      = "white", 
+    high     = "brown", 
+    midpoint = .02
+  ) +
+  labs(
+    title = 'scale_fill_gradient2(
+    low = "grey", mid = "white",
+    high = "brown", midpoint = .02
+    )'
+  )
+
+erupt + 
+  scale_fill_gradientn(colors = terrain.colors(7)) +
+  labs(title = "scale_fill_gradientn(colors = terrain.colors(7))")
+```
+
+```{r}
+library(munsell)
+
+# Generate a ggplot with hue_slice()
+hue_slice("5P") +  
+  # Add arrows for annotation
+  annotate( 
+    geom  = "segment", 
+    x     = c(7, 7), 
+    y     = c(1, 10), 
+    xend  = c(7, 7), 
+    yend  = c(2, 9), 
+    arrow = arrow(length = unit(2, "mm"))
+  )
+
+# Construct scale
+erupt +
+  scale_fill_gradient(
+    low  = mnsl("5P 2/12"), 
+    high = mnsl("5P 7/12")
+)
+```
+
+```{r}
+library(munsell)
+library(colorspace)
+
+erupt + 
+  scale_fill_gradient2(
+    low      = mnsl("5B 7/8"),
+    high     = mnsl("5Y 7/8"),
+    mid      = mnsl("N 7/0"),
+    midpoint = .02
+  ) +
+  labs(title = 'scale_fill_gradient2(low = mnsl("5B 7/8"), high = mnsl("5Y 7/8"), mid = mnsl("N 7/0"),
+    midpoint = .02)')
+
+erupt +
+  scale_fill_gradientn(colors = heat_hcl(7)) +
+  labs(title = "scale_fill_gradientn(colors = heat_hcl(7))")
+
+erupt +
+  scale_fill_gradientn(colors = diverge_hcl(7)) +
+  labs(title = "scale_fill_gradientn(colors = diverge_hcl(7))")
+
+# Extra from the second edition
+mid <- median(faithfuld$density)
+
+erupt +
+  scale_fill_gradient2(midpoint = mid) +
+  labs(title = "scale_fill_gradient2(midpoint = mid)")
+```
+
+### 11.2.3 Missing values
+
+```{r}
+tbl <- tibble(x = 1, y = 1:5, z = c(1, 3, 2, NA, 5))
+
+p <- tbl %>% 
+  ggplot(aes(x, y, fill = z)) +
+  geom_tile(linewidth = 5) +
+  labs(
+    x = NULL,
+    y = NULL
+  ) +
+  scale_x_continuous(labels = NULL)
+
+p
+
+# Make missing colors invisible
+p +
+  scale_fill_gradient(na.value = NA)
+
+p +
+  scale_fill_gradient(na.value = "yellow")
+
+# Extra from the second edition
+p +
+  scale_fill_gradient(
+    low      = "black",
+    high     = "white",
+    na.value = "red"
+  )
+```
+
+### 11.2.4 Limits, breaks, and labels
+
+```{r}
+library(scales)
+
+toy <- tibble(
+  const = 1,
+  up    = 1:4,
+  txt   = letters[1:4],
+  big   = (1:4) * 1000,
+  log   = c(2, 5, 10, 2000)
+)
+
+base <- toy %>% 
+  ggplot(aes(up, up, fill = big)) + 
+  geom_tile() + 
+  labs(
+    x = NULL,
+    y = NULL
+  ) 
+
+base 
+
+base +
+  scale_fill_continuous(limits = c(0, 10000))
+
+base +
+  scale_fill_continuous(breaks = c(1000, 2000, 4000))
+
+base +
+  scale_fill_continuous(labels = label_dollar())
+```
+
+### 11.2.5 Legends
+
+```{r}
+base <- mpg %>% 
+  ggplot(aes(cyl, displ, color = hwy)) +
+  geom_point(size = 2)
+
+base
+
+# These next two give same results
+base + 
+  guides(color = guide_colorbar(reverse = TRUE)) +
+  labs(title = "guides(color = guide_colorbar(reverse = TRUE))")
+
+base + 
+  scale_color_continuous(guide = guide_colorbar(reverse = TRUE)) +
+  labs(title = "scale_color_continuous(guide = guide_colorbar(reverse = TRUE))")
+
+base +
+  guides(color = guide_colorbar(barheight = unit(2, "cm"))) +
+  labs(title = 'guides(color = guide_colorbar(barheight = unit(2, "cm")))')
+
+base + 
+  guides(color = guide_colorbar(direction = "horizontal")) +
+  labs(title = 'guides(color = guide_colorbar(direction = "horizontal")')
+```
+
+## 11.3 Discrete colour scales
+
+```{r}
+library(wesanderson)
+
+tbl <- tibble(
+  x = c("a", "b", "c", "d"),
+  y = c(3, 4, 1, 2)
+)
+
+bars <- tbl %>%
+  ggplot(aes(x, y, fill = x)) +
+  geom_bar(stat = "identity") +
+  labs(
+    x = NULL,
+    y = NULL
+  ) +
+  theme(legend.position = "none")
+
+# These three are identical
+bars
+
+bars + scale_fill_discrete()
+
+bars + scale_fill_hue()
+```
+
+### 11.3.1 Brewer scales
+
+```{r}
+library(RColorBrewer)
+
+display.brewer.all()
+```
+
+```{r}
+bars +
+    scale_fill_brewer(palette = "Set1") +
+    labs(title = 'scale_fill_brewer(palette = "Set1")')
+
+bars +
+    scale_fill_brewer(palette = "Set2") +
+    labs(title = 'scale_fill_brewer(palette = "Set2")')
+
+bars +
+    scale_fill_brewer(palette = "Accent") +
+    labs(title = 'scale_fill_brewer(palette = "Accent")')
+```
+
+```{r}
+# Bright colors work best with points
+tbl <- data.frame(
+  x = 1:3 + runif(30),
+  y = runif(30),
+  z = c("a", "b", "c")
+) %>% as_tibble()
+
+point <- tbl %>% 
+  ggplot(aes(x, y, color = z)) +
+  geom_point() +
+  theme(legend.position = "none") +
+  labs(
+    x = NULL,
+    y = NULL
+  )
+
+point +
+  scale_color_brewer(palette = "Set1") +
+  labs(title = 'scale_color_brewer(palette = "Set1")')
+
+point +
+  scale_color_brewer(palette = "Set2") +
+  labs(title = 'scale_color_brewer(palette = "Set2")')
+
+point +
+  scale_color_brewer(palette = "Pastel1") +
+  labs(title = 'scale_color_brewer(palette = "Pastel1")')
+```
+
+```{r}
+# Subtler colors work better with areas
+tbl <- tibble(x = 1:3, y = 3:1, z = c("a", "b", "c"))
+
+area <- tbl %>% 
+  ggplot(aes(x, y, fill = z)) +
+  geom_bar(stat = "identity") +
+  theme(legend.position = "none") +
+  labs(
+    x = NULL,
+    y = NULL
+  )
+
+area +
+  scale_fill_brewer(palette = "Set1") +
+  labs(title = 'scale_fill_brewer(palette = "Set1")')
+
+area +
+  scale_fill_brewer(palette = "Set2") +
+  labs(title = 'scale_fill_brewer(palette = "Set2")')
+
+area +
+  scale_fill_brewer(palette = "Pastel1") +
+  labs(title = 'scale_fill_brewer(palette = "Pastel1")')
+```
+
+### 11.3.2 Hue and grey scales
+
+```{r}
+bars
+
+bars +
+    scale_fill_hue(c = 40) +
+    labs(title = "scale_fill_hue(c = 40)")
+
+bars +
+    scale_fill_hue(h = c(180, 300)) +
+    labs(title = "scale_fill_hue(h = c(180, 300))")
+
+bars +
+    scale_fill_grey() +
+    labs(title = "scale_fill_grey()")
+
+bars +
+    scale_fill_grey(start = 0.5, end = 1) +
+    labs(title = "scale_fill_grey(start = 0.5, end = 1)")
+
+bars +
+    scale_fill_grey(start = 0, end = 0.5) +
+    labs(title = "scale_fill_grey(start = 0, end = 0.5)")
+```
+
+### 11.3.3 Paletteer scales
+
+```{r}
+library(paletteer)
+
+bars +
+  scale_fill_paletteer_d("rtist::vangogh") +
+  labs(title = 'scale_fill_paletteer_d("rtist::vangogh")')
+
+bars +
+  scale_fill_paletteer_d("colorBlindness::paletteMartin") +
+  labs(title = 'scale_fill_paletteer_d("colorBlindness::paletteMartin")')
+
+bars +
+  scale_fill_paletteer_d("wesanderson::FantasticFox1") +
+  labs(title = 'scale_fill_paletteer_d("wesanderson::FantasticFox1")')
+```
+
+### 11.3.4 Manual scales
+
+```{r}
+bars + 
+  scale_fill_manual(values = c("sienna1", "sienna4", "hotpink1", "hotpink4")) +
+  labs(title = 'scale_fill_manual(values = c("sienna1", "sienna4", "hotpink1", "hotpink4"))')
+
+bars + 
+  scale_fill_manual(values = c("tomato1", "tomato2", "tomato3", "tomato4")) +
+  labs(title = 'scale_fill_manual(values = c("tomato1", "tomato2", "tomato3", "tomato4"))')
+
+bars + 
+  scale_fill_manual(values = c("grey", "black", "grey", "grey")) +
+  labs(title = 'scale_fill_manual(values = c("grey", "black", "grey", "grey"))')
+
+# You can also use a named vector to specify colors to be assigned to each level which allows you to specify the levels in any order you like
+bars + 
+  scale_fill_manual(
+    values = c(
+      "d" = "grey",
+      "c" = "grey",
+      "b" = "black",
+      "a" = "grey"
+    )
+  ) +
+  labs(title = 'scale_fill_manual(values = c("d" = "grey", "c" = "grey", "b" = "black", "a" = "grey"))')
+
+# Extra from the second edition
+bars +
+    scale_fill_manual(values = wes_palette("GrandBudapest1")) +
+    labs(title = 'scale_fill_manual(values = wes_palette("GrandBudapest1"))')
+bars +
+    scale_fill_manual(values = wes_palette("Zissou1")) +
+    labs(title = 'scale_fill_manual(values = wes_palette("Zissou1"))')
+
+bars +
+    scale_fill_manual(values = wes_palette("Rushmore1")) +
+    labs(title = 'scale_fill_manual(values = wes_palette("Rushmore1"))')
+```
+
+### 11.3.5 Limits, breaks, and labels
+
+```{r}
+base_99 <- mpg %>%
+  filter(year == 1999) %>%
+  ggplot(aes(displ, hwy, color = fl)) +
+  geom_point() 
+  
+base_08 <- mpg %>%
+  filter(year == 2008) %>% 
+  ggplot(aes(displ, hwy, color = fl)) +
+  geom_point() 
+
+base_99
+
+base_08
+
+base_99 + 
+  lims(color = c("c", "d", "e", "p", "r")) +
+  labs(title = 'lims(color = c("c", "d", "e", "p", "r"))')
+
+base_08 +
+  lims(color = c("c", "d", "e", "p", "r")) +
+  labs(title = 'lims(color = c("c", "d", "e", "p", "r"))')
+
+base_99 + 
+  lims(
+    x      = c(1, 7), 
+    y      = c(10, 45), 
+    color = c("c", "d", "e", "p", "r")
+  ) +
+  labs(title = 'lims(
+    x      = c(1, 7), 
+    y      = c(10, 45), 
+    color = c("c", "d", "e", "p", "r")
+  )')
+
+base_08 + 
+  lims(
+    x      = c(1, 7), 
+    y      = c(10, 45), 
+    color = c("c", "d", "e", "p", "r")
+  ) +
+  labs(title = 'lims(
+    x      = c(1, 7), 
+    y      = c(10, 45), 
+    color = c("c", "d", "e", "p", "r")
+  )')
+
+base_99 + 
+  scale_color_discrete(
+    limits = c("c", "d", "e", "p", "r"), 
+    breaks = c("d", "p", "r"),
+    labels = c("diesel", "premium", "regular")
+  ) +
+  labs(title = 'scale_color_discrete(
+    limits = c("c", "d", "e", "p", "r"), 
+    breaks = c("d", "p", "r"),
+    labels = c("diesel", "premium", "regular")
+  )')
+
+base_99 + 
+  lims(x = c(1, 7), y = c(10, 45)) +
+  scale_color_discrete(
+    limits = c("c", "d", "e", "p", "r"), 
+    breaks = c("d", "p", "r"),
+    labels = c("diesel", "premium", "regular")
+  ) +
+  labs(title = 'lims(x = c(1, 7), y = c(10, 45)) +
+  scale_color_discrete(
+    limits = c("c", "d", "e", "p", "r"), 
+    breaks = c("d", "p", "r"),
+    labels = c("diesel", "premium", "regular")
+  )')
+
+base_08 + 
+  lims(x = c(1, 7), y = c(10, 45)) +
+  scale_color_discrete(
+    limits = c("c", "d", "e", "p", "r"), 
+    labels = c("compressed", "diesel", "ethanol", "premium", "regular")
+  ) +
+  labs(title = 'lims(x = c(1, 7), y = c(10, 45)) +
+  scale_color_discrete(
+    limits = c("c", "d", "e", "p", "r"), 
+    labels = c("compressed", "diesel", "ethanol", "premium", "regular")
+  )')
+```
+
+### 11.3.6 Legends
+
+```{r}
+base <- mpg %>% 
+  ggplot(aes(drv, fill = factor(cyl))) +
+  geom_bar() 
+
+base
+
+base +
+  guides(fill = guide_legend(ncol = 2))
+
+base +
+  guides(fill = guide_legend(ncol = 2, byrow = TRUE))
+
+base +
+  guides(fill = guide_legend(reverse = TRUE))
+```
+
+```{r}
+base <- mpg %>% 
+  ggplot(aes(displ, hwy, color = drv)) +
+  geom_point(size = 4, alpha = .2, stroke = 0)
+
+base +
+  guides(color = guide_legend())
+
+base +
+  guides(color = guide_legend(override.aes = list(alpha = 1)))
+```
+
+## 11.4 Binned colour scales
+
+```{r}
+library(viridis)
+
+erupt +
+  scale_fill_binned() +
+  labs(title = "scale_fill_binned()")
+
+erupt +
+  scale_fill_steps() +
+  labs(title = "scale_fill_steps()")
+
+erupt +
+  scale_fill_steps(n.breaks = 8) +
+  labs(title = "scale_fill_steps(n.breaks = 8)")
+
+erupt + 
+  scale_fill_steps(low = "grey", high = "brown") +
+  labs(title = 'scale_fill_steps(low = "grey", high = "brown")')
+
+erupt + 
+  scale_fill_steps2(
+    low = "grey", 
+    mid = "white", 
+    high = "brown", 
+    midpoint = .02
+  ) +
+  labs(title = 'scale_fill_steps2(
+    low = "grey", 
+    mid = "white", 
+    high = "brown", 
+    midpoint = .02
+  )')
+
+erupt +
+  scale_fill_stepsn(n.breaks = 12, colors = terrain.colors(12)) +
+  labs(title = "scale_fill_stepsn(n.breaks = 12, colors = terrain.colors(12))")
+
+erupt + 
+  scale_fill_stepsn(n.breaks = 9, colors = viridis(9)) +
+  labs(title = "scale_fill_stepsn(n.breaks = 9, colors = viridis(9))")
+
+erupt +
+  scale_fill_stepsn(n.breaks = 9, colors = magma(9)) +
+  labs(title = "scale_fill_stepsn(n.breaks = 9, colors = magma(9))")
+
+erupt +
+  scale_fill_stepsn(n.breaks = 9, colors = inferno(9)) +
+  labs(title = "scale_fill_stepsn(n.breaks = 9, colors = inferno(9))")
+
+erupt +
+  scale_fill_fermenter(n.breaks = 9) +
+  labs(title = "scale_fill_fermenter(n.breaks = 9)")
+
+erupt +
+  scale_fill_fermenter(n.breaks = 9, palette = "Oranges") +
+  labs(title = 'scale_fill_fermenter(n.breaks = 9, palette = "Oranges")')
+
+erupt +
+  scale_fill_fermenter(n.breaks = 9, palette = "PuOr") +
+  labs(title = 'scale_fill_fermenter(n.breaks = 9, palette = "PuOr")')
+```
+
+### 11.4.2 Legends
+
+```{r}
+base <- mpg %>% 
+  ggplot(aes(cyl, displ, color = hwy)) +
+  geom_point(size = 2) +
+  scale_color_binned()
+
+base
+
+base +
+  guides(color = guide_colorsteps(show.limits = TRUE)) +
+  labs(title = "guides(color = guide_colorsteps(show.limits = TRUE))")
+  
+```
+
+## 11.5 Date-time colour scales
+
+```{r}
+Sys.setlocale(category = "LC_ALL", locale = "us")
+
+base <- economics %>% 
+  ggplot(aes(psavert, uempmed, color = date)) + 
+  geom_point() 
+
+base
+
+base + 
+  scale_color_date(
+    date_breaks = "142 months", 
+    date_labels = "%b %Y"
+  )
+```
+
+## 11.6 Alpha scales
+
+```{r}
+faithfuld %>% 
+  ggplot(aes(waiting, eruptions, alpha = density)) +
+  geom_raster(fill = "maroon") +
+  scale_x_continuous(expand = c(0, 0)) + 
+  scale_y_continuous(expand = c(0, 0))
+```
+
+○## 11.7 Legend position
+
+```{r}
+base <- ggplot(toy, aes(up, up)) + 
+  geom_point(aes(color = txt), size = 3) + 
+  xlab(NULL) + 
+  ylab(NULL)
+
+base + 
+  theme(legend.position = "left") +
+  labs(title = 'theme(legend.position = "left")')
+
+# The default
+base + 
+  theme(legend.position = "right") +
+  labs(title = 'theme(legend.position = "right") (the default)')
+
+base + 
+  theme(legend.position = "bottom") +
+  labs(title = 'theme(legend.position = "bottom")')
+
+base + 
+  theme(legend.position = "none") +
+  labs(title = 'theme(legend.position = "none")')
+
+base + 
+  theme(
+    legend.position = c(0, 1), 
+    legend.justification = c(0, 1)
+  ) +
+  labs(title = 'theme(
+    legend.position = c(0, 1), 
+    legend.justification = c(0, 1)
+  )')
+
+base + 
+  theme(
+    legend.position = c(0.5, 0.5), 
+    legend.justification = c(0.5, 0.5)
+  ) +
+  labs(title = 'theme(
+    legend.position = c(0.5, 0.5), 
+    legend.justification = c(0.5, 0.5)
+  )')
+
+base + 
+  theme(
+    legend.position = c(1, 0), 
+    legend.justification = c(1, 0)
+  ) +
+  labs(title = 'theme(
+    legend.position = c(1, 0), 
+    legend.justification = c(1, 0)
+  )')
+```

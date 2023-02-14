@@ -1,0 +1,401 @@
+---
+title: "Wickham, Hadley - ggplot2: Elegant Graphics for Data Analysis (2nd ed.), Chapter 11 - Modeling for Visualization"
+author: "Original Code: Hadley Wickham | Modifications: Antti Rask"
+date: "2023-01-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 11 Modeling for Visualization
+
+```{r}
+library(tidyverse)
+library(conflicted)
+  conflict_prefer("filter", "dplyr")
+  conflict_prefer("select", "dplyr")
+```
+
+## 11.2 Removing Trend
+
+```{r}
+diamonds2 <- diamonds %>% 
+  filter(carat <= 2) %>% 
+  mutate(
+    lcarat = log2(carat),
+    lprice = log2(price)
+  )
+
+diamonds2
+```
+
+```{r}
+diamonds2 %>% 
+  ggplot(aes(lcarat, lprice)) +
+  geom_bin2d() +
+  geom_smooth(
+    method    = "lm",
+    se        = FALSE,
+    linewidth = 2,
+    color     = "yellow"
+  )
+```
+
+```{r}
+mod <- lm(lprice ~ lcarat, data = diamonds2)
+
+mod %>%
+  summary() %>% 
+  coef()
+```
+
+```{r}
+diamonds3 <- diamonds2 %>% 
+  mutate(rel_price = mod %>% resid())
+
+diamonds3 %>% 
+  ggplot(aes(carat, rel_price)) +
+  geom_bin2d()
+```
+
+```{r}
+xgrid <- seq(-2, 1, by = 1/3)
+
+tibble(logx = xgrid, x = round(2 ^ xgrid, 2))
+```
+
+```{r}
+color_cut <- diamonds3 %>% 
+  summarize(
+    price     = mean(price),
+    rel_price = mean(rel_price),
+    .by       = c(color, cut)
+  )
+
+color_cut
+```
+
+```{r}
+color_cut %>% 
+  ggplot(aes(color, price, color = cut)) +
+  geom_line(aes(group = cut)) +
+  geom_point()
+```
+
+```{r}
+color_cut %>% 
+  ggplot(aes(color, rel_price, color = cut)) +
+  geom_line(aes(group = cut)) +
+  geom_point()
+```
+
+### 11.2.1 Exercises
+
+1.
+```{r}
+diamonds2 <- diamonds %>%
+  mutate(
+    lcarat = log2(carat),
+    lprice = log2(price)
+  )
+
+diamonds2 %>% 
+  ggplot(aes(lcarat, lprice)) +
+  geom_bin2d() +
+  geom_smooth(
+    method    = "lm",
+    se        = FALSE,
+    linewidth = 2,
+    color     = "yellow"
+  )
+
+mod <- lm(lprice ~ lcarat, data = diamonds2)
+
+mod %>%
+  summary() %>% 
+  coef()
+
+diamonds3 <- diamonds2 %>% 
+  mutate(rel_price = mod %>% resid())
+
+diamonds3 %>% 
+  ggplot(aes(carat, rel_price)) +
+  geom_bin2d()
+
+xgrid <- seq(-2, 1, by = 1/3)
+
+tibble(logx = xgrid, x = round(2 ^ xgrid, 2))
+
+color_cut <- diamonds3 %>% 
+  summarize(
+    price     = mean(price),
+    rel_price = mean(rel_price),
+    .by       = c(color, cut)
+  )
+
+color_cut %>% 
+  ggplot(aes(color, price)) +
+  geom_line(aes(group = cut, color = cut)) +
+  geom_point(aes(color = cut))
+
+color_cut %>% 
+  ggplot(aes(color, rel_price)) +
+  geom_line(aes(group = cut, color = cut)) +
+  geom_point(aes(color = cut))
+```
+
+2.
+```{r}
+diamonds3 %>%
+  ggplot(aes(color, carat, color = cut)) +
+  geom_boxplot()
+```
+
+3.
+```{r}
+diamonds3 %>% 
+  ggplot(aes(cut, rel_price, color = color)) +
+  geom_boxplot() +
+  facet_wrap(vars(clarity))
+```
+
+4.
+```{r}
+diamonds3 %>%
+  ggplot(aes(depth, rel_price)) +
+  geom_point()
+
+diamonds3 %>%
+  ggplot(aes(table, rel_price)) +
+  geom_point()
+```
+
+## 11.3 Texas Housing Data
+
+```{r}
+txhousing
+```
+
+```{r}
+txhousing %>% 
+  ggplot(aes(date, sales, group = city)) +
+  geom_line(alpha = 1/2)
+```
+
+```{r}
+txhousing %>% 
+  ggplot(aes(date, log(sales), group = city)) +
+  geom_line(alpha = 1/2)
+```
+
+```{r}
+abilene <- txhousing %>% 
+  filter(city == "Abilene")
+
+abilene %>% 
+  ggplot(aes(date, log(sales))) +
+  geom_line()
+
+mod <- lm(
+  log(sales) ~ factor(month),
+  data = abilene
+)
+
+abilene2 <- abilene %>%
+  mutate(rel_sales = mod %>% resid())
+
+abilene2 %>%
+  ggplot(aes(date, rel_sales)) +
+  geom_line()
+```
+
+```{r}
+de_season <- function(x, month) {
+  lm(
+    x ~ factor(month),
+    na.action = na.exclude
+  ) %>% 
+    resid()
+}
+
+txhousing2 <- txhousing %>%
+  mutate(
+    rel_sales = de_season(log(sales), month),
+    .by       = city
+  )
+
+txhousing2 %>% 
+  ggplot(aes(date, rel_sales)) +
+  geom_line(aes(group = city), alpha = 1/5) +
+  # Due to a warning message, I switched this to a stat_summary instead
+  stat_summary(
+    geom  = "line",
+    fun   = "mean",
+    color = "red"
+  )
+```
+
+### 11.3.1 Exercises
+
+1.
+```{r}
+txhousing2 %>%
+  ggplot(aes(date, rel_sales)) + 
+  geom_line(aes(group = city), alpha = 1/5) +
+  geom_smooth(
+    method = "loess",
+    se = FALSE,
+    color = "red"
+  )
+```
+
+2.
+```{r}
+txhousing %>%
+  ggplot(aes(date, sales, group = city)) +
+  geom_line(alpha = 1/2)
+```
+
+## 11.4 Visualizing Models
+
+```{r}
+library(broom)
+
+model_sum <- txhousing %>%
+  group_by(city) %>%
+  group_modify(
+    ~ glance(
+      lm(
+        log2(sales) ~ factor(month),
+        data        = .,
+        na.action   = na.exclude
+      )
+    )
+  ) %>% 
+  ungroup()
+
+model_sum
+```
+
+```{r}
+model_sum %>%
+  mutate(city = fct_reorder(city, r.squared)) %>%
+  ggplot(aes(r.squared, city)) +
+  geom_point()
+```
+
+```{r}
+top3    <- c("Bryan-College Station", "Lubbock", "NE Tarrant County")
+
+bottom3 <- c("McAllen", "Brownsville", "Harlingen")
+
+extreme <- txhousing %>%
+  filter(
+    city %in% c(top3, bottom3),
+    !is.na(sales)
+  ) %>% 
+  mutate(city = factor(city, c(top3, bottom3)))
+
+extreme %>%
+  ggplot(aes(month, log(sales), group = year)) +
+  geom_line() +
+  facet_wrap(vars(city))
+```
+
+## 11.6 Coefficient-Level Summaries
+
+```{r}
+library(broom)
+
+coefs <- txhousing %>%
+  group_by(city) %>%
+  group_modify(
+    ~ tidy(
+      lm(
+        log2(sales) ~ factor(month),
+        data = .,
+        na.action = na.exclude
+      )
+    )
+  ) %>% 
+  ungroup()
+
+coefs
+```
+
+```{r}
+months <- coefs %>% 
+  filter(str_detect(term, "factor")) %>% 
+  extract(term, "month", "(\\d+)", convert = TRUE)
+
+months
+```
+
+```{r}
+months %>% 
+  ggplot(aes(month, 2 ^ estimate, group = city)) +
+  geom_line()
+```
+
+```{r}
+coef_sum <- months %>% 
+  group_by(city) %>% 
+  summarize(max = max(estimate))
+
+coef_sum %>%
+  mutate(city = fct_reorder(city, max)) %>% 
+  ggplot(aes(2 ^ max, city)) +
+  geom_point()
+```
+
+## 11.7. Observation Data
+
+```{r}
+library(broom)
+
+obs_sum <- txhousing %>%
+  group_by(city) %>%
+  nest() %>%
+  mutate(
+    mod = map(
+      data,
+      ~ lm(
+        log2(sales) ~ factor(month),
+        data = .
+      )
+    ),
+    augmented = map(mod, augment, se_fit = TRUE)
+  ) %>%
+  unnest(augmented) %>%
+  ungroup() %>%
+  select(-c(data, mod, .rownames)) %>% 
+  rename(
+    "log2.sales"   = "log2(sales)",
+    "factor.month" = "factor(month)"
+  )
+
+obs_sum
+```
+
+```{r}
+obs_sum %>% 
+  ggplot(aes(.std.resid)) +
+  geom_histogram(binwidth = 0.1)
+
+obs_sum %>% 
+  ggplot(aes(abs(.std.resid))) +
+  geom_histogram(binwidth = 0.1)
+```
+
+```{r}
+obs_sum %>% 
+  filter(abs(.std.resid) > 2) %>% 
+  summarize(
+    n   = n(),
+    avg = mean(abs(.std.resid)),
+    .by = city
+  ) %>%
+  arrange(desc(n))
+```
