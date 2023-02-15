@@ -1,0 +1,372 @@
+---
+title: "Wickham, Hadley - ggplot2: Elegant Graphics for Data Analysis (2nd ed.), Chapter 12 - Programming with ggplot2"
+author: "Original Code: Hadley Wickham (except Claus O. Wilke for cowplot) | Modifications: Antti Rask"
+date: "2023-01-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 12 Programming with ggplot2
+
+```{r}
+library(tidyverse)
+library(conflicted)
+  conflict_prefer("filter", "dplyr")
+  conflict_prefer("select", "dplyr")
+```
+
+## 12.2 Single Components
+
+```{r}
+bestfit <- geom_smooth(
+  method    = "lm",
+  se        = FALSE,
+  color     = alpha("steelblue", 0.5),
+  linewidth = 2
+)
+
+mpg %>% 
+  ggplot(aes(cty, hwy)) +
+  geom_point() +
+  bestfit
+
+mpg %>% 
+  ggplot(aes(displ, hwy)) +
+  geom_point() +
+  bestfit
+```
+
+```{r}
+geom_lm <- function(
+  formula    = y ~ x,
+  color      = alpha("steelblue", 0.5),
+  linewidth  = 2,
+  ...
+) {
+  geom_smooth(
+    formula   = formula,
+    se        = FALSE,
+    method    = "lm",
+    color     = color,
+    linewidth = linewidth,
+    ...
+  )
+}
+
+p <- mpg %>% 
+  ggplot(aes(displ, 1 / hwy)) +
+  geom_point()
+
+p +
+  geom_lm()
+
+p +
+  geom_lm(
+    y ~ poly(x, 2),
+    linewidth = 1,
+    color     = "red"
+  )
+```
+
+### 12.2.1 Exercises
+
+1. 
+```{r}
+histogram_pink_100_bins <- geom_histogram(bins = 100, fill = "pink")
+
+mpg %>% 
+  ggplot(aes(cty)) +
+  histogram_pink_100_bins
+```
+
+2.
+```{r}
+brewer_fill_blues <- scale_fill_brewer(palette = "Blues")
+
+mpg %>%
+  ggplot(aes(factor(manufacturer), fill = factor(drv))) +
+  geom_bar(position = "stack") +
+  brewer_fill_blues +
+  coord_flip()
+```
+
+## 12.3 Multiple Components
+
+```{r}
+geom_mean <- function() {
+  list(
+    stat_summary(
+      fun   = "mean",
+      geom  = "bar",
+      fill  = "grey70"
+    ),
+    stat_summary(
+      fun.data = "mean_cl_normal",
+      geom     = "errorbar",
+      width    = 0.4
+    )
+  )
+}
+
+mpg %>%
+  ggplot(aes(class, cty)) + 
+  geom_mean()
+
+mpg %>%
+  ggplot(aes(drv, cty)) +
+  geom_mean()
+```
+
+```{r}
+geom_mean <- function(se = TRUE) {
+  list(
+    stat_summary(
+      fun  = "mean",
+      geom = "bar",
+      fill = "grey70"
+    ),
+    if (se) {
+      stat_summary(
+        fun.data = "mean_cl_normal",
+        geom     = "errorbar",
+        width    = 0.4
+      )
+    }
+  )
+}
+
+p <- mpg %>% 
+  ggplot(aes(drv, cty))
+  
+p +
+  geom_mean()
+
+p +
+  geom_mean(se = FALSE)
+```
+
+### 12.3.2 Annotation
+
+```{r}
+# borders -> borders2
+borders2 <- function(
+  database = "world",
+  regions  = ".",
+  fill     = NA,
+  color    = "grey50",
+  ...
+) {
+  
+  tbl <- map_data(database, regions)
+  
+  geom_polygon(
+    # aes_ -> aes + ~lat -> long + ~long -> lat + ~group -> group
+    aes(long, lat, group = group),
+    data        = tbl,
+    fill        = fill,
+    color       = color,
+    ...,
+    inherit.aes = FALSE,
+    show.legend = FALSE
+  )
+}
+
+# These weren't part of the original code, but I wanted to see what the function above would look like
+p <- ggplot() +
+  borders2(fill = "blue")
+
+p
+
+p +
+  coord_sf()
+```
+
+### 12.3.3 Additional Arguments
+
+```{r}
+geom_mean <- function(..., bar.params = list(), errorbar.params = list()) {
+  params          <- list(...)
+  bar.params      <- modifyList(params, bar.params)
+  errorbar.params <- modifyList(params, errorbar.params)
+
+  bar             <- do.call(
+    "stat_summary",
+    modifyList(
+      list(
+        fun  = "mean",
+        geom = "bar",
+        fill = "grey70"
+      ),
+      bar.params
+    )
+  )
+
+  errorbar        <- do.call(
+    "stat_summary",
+    modifyList(
+      list(
+        fun.data = "mean_cl_normal",
+        geom     = "errorbar",
+        width    = 0.4
+      ),
+      errorbar.params
+    )
+  )
+
+  list(bar, errorbar)
+}
+
+mpg %>%
+  ggplot(aes(class, cty)) +
+  geom_mean(
+    color           = "steelblue",
+    errorbar.params = list(width = 0.5, linewidth = 1)
+  )
+
+mpg %>%
+  ggplot(aes(class, cty)) +
+  geom_mean(
+    bar.params      = list(fill = "steelblue"),
+    errorbar.params = list(color = "blue")
+  )
+```
+
+## 12.4. Plot Functions
+
+```{r}
+piechart <- function(data, mapping) {
+  ggplot(data, mapping) +
+    geom_bar(width = 1) +
+    coord_polar(theta = "y") +
+    labs(
+      x = NULL,
+      y = NULL
+    )
+}
+
+mpg %>% 
+  piechart(aes(factor(1), fill = class))
+```
+
+```{r}
+pcp_data <- function(df) {
+  # vapply -> map_vec + .progress = TRUE + .ptype = logical(1)
+  is_numeric <- map_vec(df, is.numeric, .progress = TRUE, .ptype = logical(1))
+  
+  # Rescale numeric columns
+  rescale01 <- function(x) {
+    rng <- range(x, na.rm = TRUE)
+    (x - rng[1]) / (rng[2] - rng[1])
+  }
+  # lapply -> map
+  df[is_numeric] <- map(df[is_numeric], rescale01)
+  
+  # Add row identifier
+  df$.row <- rownames(df)
+  
+  # Treat numerics as value (aka measure) variables
+  # gather_ -> pivot_longer + cols = names(df)[is_numeric] + names_to = "variable" + values_to = "value"
+  pivot_longer(df, cols = names(df)[is_numeric], names_to = "variable", values_to = "value")
+}
+
+pcp <- function(df, ...) {
+  df <- pcp_data(df)
+  df %>% 
+    ggplot(aes(variable, value, group = .row)) +
+    geom_line(...)
+}
+
+mpg %>% 
+  pcp()
+
+mpg %>% 
+  pcp(aes(color = drv))
+```
+
+### 12.4.1 Indirectly Referring to Variables
+
+```{r}
+# Since aes_ has been deprecated, this block has changed significantly
+x_var <- "displ"
+
+# Don't do this!
+aes(x_var)
+
+# Do one of these instead:
+aes(displ)
+
+# This doesn't look right by itself, but will prove useful in the next block
+aes(.data[[x_var]])
+
+aes({{ x_var }})
+```
+
+```{r}
+# Since aes_ has been deprecated, this block has changed significantly, but there is a working replacement shown below:
+
+piechart1 <- function(data, var, ...) {
+  # aes_(~factor(1) -> aes(factor(1) + as.name(var) -> .data[[var]]
+  piechart(data, aes(factor(1), fill = .data[[var]]))
+}
+
+mpg %>%
+  piechart1("class") +
+  theme(legend.position = "none")
+
+piechart2 <- function(data, var, ...) {
+  # aes_(~factor(1) -> aes(factor(1) + as.name(var) -> {{ var }}
+  piechart(data, aes(factor(1), fill = {{ var }}))
+}
+
+mpg %>% 
+  piechart2(class) +
+  theme(legend.position = "none")
+```
+
+### 12.4.2 The Plot Environment
+
+```{r}
+# This didn't use to work, but works nowadays just fine:
+f <- function() {
+  n <- 10
+  geom_line(aes(x / n))
+}
+
+tbl <- tibble(x = 1:3, y = 1:3)
+
+tbl %>% 
+  ggplot(aes(x, y)) + f()
+
+# This still works, too:
+f <- function() {
+  color <- "blue"
+  geom_line(color = color)
+}
+
+tbl %>%
+  ggplot(aes(x, y)) + f()
+```
+
+## 12.5 Functional Programming
+
+```{r}
+geoms <- list(
+  geom_point(),
+  geom_boxplot(aes(group = cut_width(displ, 1))),
+  list(geom_point(), geom_smooth())
+)
+
+p <- mpg %>% 
+  ggplot(aes(displ, hwy))
+
+# lapply -> map
+map(
+  geoms,
+  function(g) {
+    p + g
+  }
+)
+```

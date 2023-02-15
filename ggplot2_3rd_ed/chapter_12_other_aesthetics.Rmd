@@ -1,0 +1,203 @@
+---
+title: "Wickham, Hadley - ggplot2: Elegant Graphics for Data Analysis (3rd ed.), Chapter 12 - Other aesthetics"
+author: "Original Code: Hadley Wickham | Modifications: Antti Rask"
+date: "2023-01-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 12 Other aesthetics
+
+```{r}
+library(tidyverse)
+library(conflicted)
+  conflict_prefer("filter", "dplyr")
+  conflict_prefer("select", "dplyr")
+```
+
+## 12.1 Size
+
+```{r}
+base <- mpg %>% 
+  ggplot(aes(displ, hwy, size = cyl)) + 
+  geom_point()
+
+base
+
+base +
+  scale_size(range = c(1, 2))
+```
+
+### 12.1.1 Radius size scales
+
+```{r}
+# Since there is no ready planets dataset, I copy pasted the dataframe from the online version and used the tribble function to turn it into a tibble
+
+planets <- tribble(
+  ~name, ~type, ~position, ~radius, ~orbit,
+  "Mercury", "Inner", 1, 2440, 5.79e+07,
+  "Venus", "Inner", 2, 6052, 1.08e+08,
+  "Earth", "Inner", 3, 6378, 1.50e+08,
+  "Mars", "Inner", 4, 3390, 2.28e+08,
+  "Jupiter", "Outer", 5, 71400, 7.78e+08,
+  "Saturn", "Outer", 6, 60330, 1.43e+09,
+  "Uranus", "Outer", 7, 25559, 2.87e+09,
+  "Neptune", "Outer", 8, 24764, 4.50e+09
+) %>%
+  mutate(
+    name = as_factor(name) %>% fct_reorder(position)
+  )
+
+planets
+```
+
+```{r}
+base <- planets %>% 
+  ggplot(aes(1, name, size = radius)) + 
+  geom_point() + 
+  scale_x_continuous(breaks = NULL) + 
+  labs(
+    x    = NULL,
+    y    = NULL,
+    size = NULL
+  )
+  
+base +
+  ggtitle("not to scale")
+
+base + 
+  scale_radius(limits = c(0, NA), range = c(0, 10)) + 
+  ggtitle("to scale")
+```
+
+### 12.1.2 Binned size scales
+
+```{r}
+base <- mpg %>% 
+  ggplot(aes(displ, manufacturer, size = hwy)) +
+  geom_point(alpha = .2) +
+  scale_size_binned()
+
+base
+
+base +
+  guides(size = guide_bins(show.limits = TRUE))
+
+base +
+  guides(size = guide_bins(axis = FALSE))
+
+base + 
+  guides(
+  size = guide_bins(
+    axis.colour = "red",
+    axis.arrow  = arrow(
+      length = unit(.1, "inches"), 
+      ends   = "first", 
+      type   = "closed"
+    )
+  )
+)
+
+base +
+  guides(size = guide_bins(direction = "horizontal"))
+
+base +
+  guides(size = guide_bins(axis = FALSE, direction = "horizontal"))
+
+base +
+  guides(size = guide_bins(axis = FALSE, direction = "horizontal", show.limits = TRUE))
+```
+
+## 12.2 Shape
+
+```{r}
+base <- mpg %>% 
+  ggplot(aes(displ, hwy, shape = factor(cyl))) + 
+  geom_point()
+
+base
+
+base +
+  scale_shape(solid = FALSE)
+
+base + 
+  scale_shape_manual(
+    values = c("4" = 16, "5" = 17, "6" = 1 , "8" = 2)
+  )
+```
+
+## 12.3 Line type
+
+```{r}
+economics_long %>%
+  ggplot(aes(date, value01, linetype = variable)) +
+  geom_line()
+```
+
+```{r}
+tbl  <- tibble(value = letters[1:13])
+
+base <- tbl %>% 
+  ggplot(aes(linetype = value)) +
+  geom_segment(
+    mapping = aes(x = 0, xend = 1, y = value, yend = value),
+    show.legend = FALSE
+  ) +
+  theme(panel.grid = element_blank()) +
+  scale_x_continuous(NULL, NULL)
+
+base
+
+linetypes <- function(n) {
+  types <- c("55",  "75", "95", "1115", "111115", "11111115", "5158", "9198", "c1c8")
+  return(types[seq_len(n)])
+}
+
+base +
+  scale_linetype(palette = linetypes)
+
+base +
+  scale_linetype(palette = linetypes, na.value = "dotted")
+```
+
+## 12.4 Manual scales
+
+```{r}
+huron <- tibble(
+  year  = 1875:1972,
+  level = as.numeric(LakeHuron)
+)
+
+huron %>% 
+  ggplot(aes(year)) +
+  geom_line(aes(y = level + 5), color = "red") +
+  geom_line(aes(y = level - 5), color = "blue")
+
+p <- huron %>% 
+  ggplot(aes(year)) +
+  geom_line(aes(y = level + 5, color = "above")) +
+  geom_line(aes(y = level - 5, color = "below"))
+
+p
+
+p +
+  scale_color_manual(
+    "Direction",
+    values = c("above" = "red", "below" = "blue")
+  )
+```
+
+## 12.5 Identity scales
+
+```{r}
+head(luv_colours)
+
+luv_colours %>% 
+  ggplot(aes(u, v, color = col)) +
+  geom_point(size = 3) +
+  scale_color_identity() +
+  coord_equal()
+```
