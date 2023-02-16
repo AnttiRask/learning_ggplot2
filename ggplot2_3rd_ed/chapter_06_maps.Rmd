@@ -1,0 +1,807 @@
+---
+title: "Wickham, Hadley - ggplot2: Elegant Graphics for Data Analysis (3rd ed.), Chapter 6 - Maps"
+author: "Original Code: Hadley Wickham (except Taro Mieno for Raster Images, Duncan Murdoch for rgl and Dr. Dominic Royé for OpenStreetMaps) | Modifications: Antti Rask"
+date: "2023-01-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 6 Maps
+
+```{r}
+library(tidyverse)
+library(conflicted)
+  conflict_prefer("filter", "dplyr")
+  conflict_prefer("select", "dplyr")
+```
+
+## 6.1 Polygon maps
+
+```{r}
+mi_counties <- map_data("county", "michigan") %>%
+  as_tibble() %>%
+  select(lon = long, lat, group, id = subregion)
+  
+head(mi_counties)
+```
+
+```{r}
+p <- mi_counties %>%
+  ggplot(aes(lon, lat, group = group))
+
+p +
+  geom_point(size = .25, show.legend = FALSE) +
+  coord_sf()
+  
+p +
+  geom_polygon() +
+  coord_sf()
+
+p +
+  geom_polygon(
+    fill = NA, 
+    color = "grey50"
+  ) + 
+  coord_sf()
+```
+
+## 6.2 Simple features map
+
+```{r}
+library(ozmaps)
+library(sf)
+
+oz_states <- ozmap_states
+oz_states
+
+oz_states %>%
+  ggplot() + 
+  geom_sf() + 
+  coord_sf()
+```
+
+### 6.2.1 Layered maps
+
+```{r}
+library(ozmaps)
+library(rmapshaper)
+
+oz_states <- ozmap_states %>%
+  filter(NAME != "Other Territories")
+
+oz_votes <- ms_simplify(abs_ced)
+
+ggplot() + 
+  geom_sf(
+    data        = oz_states,
+    mapping     = aes(fill = NAME),
+    show.legend = FALSE
+  ) +
+  geom_sf(data = oz_votes, fill = NA) + 
+  coord_sf()
+```
+
+### 6.2.2 Labelled maps
+
+```{r}
+library(ozmaps)
+# Filter electorates in the Sydney metropolitan region
+sydney_map <- abs_ced %>%
+  filter(
+    NAME %in% c(
+      "Sydney",
+      "Wentworth",
+      "Warringah",
+      "Kingsford Smith",
+      "Grayndler",
+      "Lowe",
+      "North Sydney",
+      "Barton",
+      "Bradfield",
+      "Banks",
+      "Blaxland",
+      "Reid",
+      "Watson",
+      "Fowler",
+      "Werriwa",
+      "Prospect",
+      "Parramatta",
+      "Bennelong",
+      "Mackellar",
+      "Greenway",
+      "Mitchell",
+      "Chifley",
+      "McMahon"
+    )
+  )
+
+# Draw the electoral map of Sydney
+sydney_map %>%
+ggplot() +
+  geom_sf(aes(fill = NAME), show.legend = FALSE) + 
+  coord_sf(
+    xlim = c(150.97, 151.3),
+    ylim = c(-33.98, -33.79)
+  ) + 
+  geom_sf_label(
+    aes(label     = NAME),
+    label.padding = unit(1, "mm")
+  )
+
+# From the book:
+# "The warning message is worth noting. Internally geom_sf_label() uses the function st_point_on_surface() from the sf package to place labels, and the warning message occurs because most algorithms used by sf to compute geometric quantities (e.g., centroids, interior points) are based on an assumption that the points lie in on a flat two dimensional surface and parameterised with Cartesian co-ordinates. This assumption is not strictly warranted, and in some cases (e.g., regions near the poles) calculations that treat longitude and latitude in this way will give erroneous answers. For this reason, the sf package produces warning messages when it relies on this approximation."
+```
+
+### 6.2.3 Adding other geoms
+
+```{r}
+oz_capitals <- tribble( 
+  ~city,           ~lat,     ~lon,
+  "Sydney",    -33.8688, 151.2093,  
+  "Melbourne", -37.8136, 144.9631, 
+  "Brisbane",  -27.4698, 153.0251, 
+  "Adelaide",  -34.9285, 138.6007, 
+  "Perth",     -31.9505, 115.8605, 
+  "Hobart",    -42.8821, 147.3272, 
+  "Canberra",  -35.2809, 149.1300, 
+  "Darwin",    -12.4634, 130.8456, 
+)
+
+ggplot() + 
+  geom_sf(data = oz_votes) + 
+  geom_sf(
+    data  = oz_states,
+    color = "black",
+    fill  = NA
+  ) + 
+  geom_point(
+    data    = oz_capitals,
+    mapping = aes(x = lon, y = lat), color = "red") + 
+  coord_sf()
+```
+
+## 6.3 Map projections
+
+```{r}
+st_crs(oz_votes)
+
+st_crs(oz_votes) == st_crs(4283)
+```
+
+```{r}
+p <- oz_votes %>%
+  ggplot() +
+  geom_sf()
+
+p
+
+p +
+  coord_sf(crs = st_crs(3112))
+```
+
+## 6.4 Working with sf data
+
+```{r}
+library(ozmaps)
+
+edenmonaro <- abs_ced %>%
+  filter(NAME == "Eden-Monaro")
+
+p <- edenmonaro %>% 
+  ggplot() +
+  geom_sf()
+
+p + 
+  coord_sf(
+    xlim = c(147.75, 150.25),
+    ylim = c(-37.5, -34.5)
+  ) 
+
+p +
+  coord_sf(
+    xlim = c(150, 150.25),
+    ylim = c(-36.3, -36)
+  ) 
+```
+
+```{r}
+edenmonaro_geometry <- edenmonaro %>% 
+  pull(geometry)
+
+st_bbox(edenmonaro_geometry)
+```
+
+```{r}
+edenmonaro_geometry
+```
+
+```{r}
+st_cast(edenmonaro_geometry, "POLYGON")
+```
+
+```{r}
+library(ozmaps)
+dawson <- abs_ced %>% 
+  filter(NAME == "Dawson") %>% 
+  pull(geometry)
+
+dawson
+
+dawson %>% 
+  ggplot() + 
+  geom_sf() +
+  coord_sf()
+```
+
+```{r}
+dawson <- st_cast(dawson, "POLYGON")
+
+which.max(st_area(dawson))
+
+dawson[-69] %>%
+  ggplot() + 
+  geom_sf() + 
+  coord_sf()
+```
+
+## 6.5 Raster maps
+
+There was a problem with the {bomrang} package and it has been archived. So, the example code for the 3rd
+edition doesn't work as it is.
+
+I opened an issue about it (https://github.com/hadley/ggplot2-book/issues/338#issuecomment-1422203499), but so far there is no idea how Hadley & co. are going to replace the chapter.
+
+While waiting for the update, I'll include another example: https://tmieno2.github.io/R-as-GIS-for-Economists/create-maps.html
+
+### Creating maps from sf objects
+
+```{r}
+# Read in the KS wells data
+gw_KS_sf <- readRDS("input/gw_KS_sf.rds")
+gw_KS_sf
+```
+
+```{r}
+# Polygons
+library(sf)
+library(tigris)
+
+KS_county <- counties(
+  state = "Kansas",
+  cb    = TRUE
+) %>%
+  st_as_sf() %>%
+  st_transform(st_crs(gw_KS_sf))
+
+KS_county
+```
+
+```{r}
+# Points
+g_wells <- gw_KS_sf %>% 
+  ggplot() +
+  geom_sf()
+
+g_wells
+```
+
+```{r}
+g_county <- KS_county %>%
+  ggplot() +
+  geom_sf()
+
+g_county
+```
+
+```{r}
+# Points
+gw_Stevens <- KS_county %>%
+  filter(NAME == "Stevens") %>%
+  st_crop(gw_KS_sf, .)
+
+p <- 
+  gw_Stevens %>% 
+  ggplot()
+
+p +
+  geom_sf(aes(color = af_used), size = 2)
+
+p +
+  geom_sf(
+    aes(size = af_used),
+    color    = "blue",
+    shape    = 15
+  )
+
+gw_Stevens %>%
+  cbind(., st_coordinates(.)) %>%
+   mutate(
+     east_west = ifelse(
+       X < -101.3,
+       "west",
+       "east")
+   ) %>%
+  ggplot() +
+  geom_sf(
+    aes(shape = east_west, color = east_west)
+  )
+```
+
+```{r}
+# Polygons
+KS_county %>%
+  ggplot() +
+  geom_sf(color = "red", fill = "darkgreen")
+
+KS_county_with_pumping <- gw_KS_sf %>%
+  filter(year == 2010) %>%
+  aggregate(., KS_county, sum, na.rm = TRUE)
+
+KS_county_with_pumping %>%
+  ggplot() +
+  geom_sf(aes(fill = af_used))
+```
+
+```{r}
+# Plotting multiple spatial objects in one figure
+ggplot() +
+  geom_sf(data = gw_KS_sf, size = 0.4) +
+  geom_sf(data = KS_county, fill = NA)
+```
+
+```{r}
+# CRS
+st_crs(KS_county)
+```
+
+```{r}
+# Convert the CRS to WGS 84/UTM zone 14N (EPSG code: 32614)
+g_32614 <- st_transform(KS_county, 32614) %>%
+  ggplot() +
+  geom_sf()
+
+g_county
+g_32614
+
+# Alternatively
+KS_county %>%
+  ggplot() +
+  geom_sf() +
+  coord_sf(crs = 32614)
+```
+
+```{r}
+# CRS of the first layer is applied for all the layers
+ggplot() +
+  geom_sf(
+    data = st_transform(KS_county, 32614)
+  ) +
+  geom_sf(data = gw_KS_sf, size = 0.4)
+```
+
+```{r}
+# Limit the geographic scope of the map
+ggplot() +
+  geom_sf(data = st_transform(KS_county, 32614)) +
+  geom_sf(data = gw_KS_sf, size = 0.4) +
+  coord_sf(crs = 4269) +
+  xlim(-99, -97) +
+  ylim(37, 39)
+```
+
+```{r}
+# Faceting
+ggplot() +
+  geom_sf(data = st_transform(KS_county, 32614)) +
+  geom_sf(data = gw_KS_sf, aes(color = af_used)) +
+  facet_wrap(vars(year))
+```
+
+```{r}
+ggplot() +
+  geom_sf(data = st_transform(KS_county, 32614)) +
+  geom_sf(data = gw_KS_sf, aes(color = af_used)) +
+  facet_wrap(
+    vars(year),
+    ncol = 1
+  )
+```
+
+```{r}
+ggplot() +
+  geom_sf(data = st_transform(KS_county, 32614)) +
+  geom_sf(data = gw_KS_sf, aes(color = af_used)) +
+  facet_wrap((af_used > 200) ~ year) +
+  theme(panel.spacing.y = unit(1, "lines"))
+```
+
+```{r}
+# Adding texts (labels) on a map
+ggplot() +
+  geom_sf(data = KS_county) +
+  geom_sf_text(
+    data      = KS_county,
+    aes(label = NAME),
+    size      = 3,
+    color     = "blue"
+  )
+
+ggplot() +
+  geom_sf(data = KS_county) +
+  geom_sf_text(
+    data          = KS_county,
+    aes(label     = NAME),
+    check_overlap = TRUE,
+    size          = 3,
+    color         = "blue"
+  )
+
+ggplot() +
+  geom_sf(data = KS_county) +
+  geom_sf_text(
+    data          = KS_county,
+    aes(label     = NAME),
+    check_overlap = TRUE,
+    size          = 3,
+    color         = "blue",
+    nudge_x       = -0.1,
+    nudge_y       = 0.1
+  )
+```
+
+```{r}
+# Individually
+Cheyenne <- KS_county %>% 
+  filter(NAME == "Cheyenne")
+
+KS_less_Cheyenne <- KS_county %>% 
+  filter(NAME != "Cheyenne")
+
+ggplot() +
+  geom_sf(data = KS_county) +
+  geom_sf_text(
+    data          = KS_less_Cheyenne,
+    aes(label     = NAME),
+    check_overlap = TRUE,
+    size          = 3,
+    color         = "blue",
+    nudge_x       = -0.1,
+    nudge_y       = 0.1
+  ) +
+  geom_sf_text(
+    data          = Cheyenne,
+    aes(label     = NAME),
+    size          = 2.5,
+    color         = "red",
+    nudge_y       = 0.2
+  )
+
+# With annotate()
+ggplot() +
+  geom_sf(data = KS_county) +
+  geom_sf_text(
+    data          = KS_less_Cheyenne,
+    aes(label     = NAME),
+    check_overlap = TRUE,
+    size          = 3,
+    color         = "blue",
+    nudge_x       = -0.1,
+    nudge_y       = 0.1
+  ) +
+  #--- use annotate to add texts on the map ---#
+  annotate(
+    geom  = "text",
+    x     = -102,
+    y     = 39.8,
+    size  = 3,
+    label = "Cheyennes",
+    color = "red"
+  )
+```
+
+### Arranging maps
+
+```{r}
+# Inset
+three_counties <- KS_county %>% 
+  filter(
+    NAME %in% c("Cheyenne", "Sherman", "Wallace")
+  )
+
+g_three_counties <- three_counties %>% 
+  ggplot() +
+  geom_sf() +
+  geom_sf_text(aes(label = NAME)) +
+  theme_void()
+
+g_three_counties
+```
+
+```{r}
+# Convert the ggplot into a grob
+grob_aoi <- ggplotGrob(g_three_counties)
+
+# Check the class
+class(grob_aoi)
+
+# Create a map of Kansas
+g_region <- ggplot() +
+  geom_sf(data = KS_county) +
+  geom_sf(
+    data  = three_counties,
+    fill  = "blue",
+    color = "red",
+    alpha = 0.5) +
+  theme_void()
+
+# Convert to a grob
+grob_region <- ggplotGrob(g_region)
+
+g_inset <- ggplot() +
+  coord_equal(
+    xlim   = c(0, 1),
+    ylim   = c(0, 1),
+    expand = FALSE
+  )
+
+g_inset
+```
+
+```{r}
+g_inset +
+  annotation_custom(
+    grob_aoi,
+    xmin = 0,
+    xmax = 0.8,
+    ymin = 0,
+    ymax = 1
+  )
+
+g_inset +
+  annotation_custom(
+    grob_aoi,
+    xmin = 0,
+    xmax = 0.8,
+    ymin = 0,
+    ymax = 1
+  ) +
+  annotation_custom(
+    grob_region,
+    xmin = 0.6,
+    xmax = 1,
+    ymin = 0,
+    ymax = 0.3
+  )
+```
+
+```{r}
+# Without border
+g_inset +
+  annotation_custom(
+    grob_aoi,
+    xmin = 0,
+    xmax = 0.8,
+    ymin = 0,
+    ymax = 1
+  ) +
+  annotation_custom(
+    grob_region,
+    xmin = 0.6,
+    xmax = 1,
+    ymin = 0,
+    ymax = 0.3
+  ) +
+  theme_void()
+```
+
+### Fine-tuning maps for publication
+
+```{r}
+gw_by_county <- st_join(
+  KS_county,
+  gw_KS_sf
+) %>%
+  as_tibble() %>%
+  with_groups(
+    c(COUNTYFP, year),
+    summarize,
+    af_used = sum(af_used, na.rm = TRUE)
+  ) %>% 
+  left_join(KS_county, ., by = "COUNTYFP") %>%
+  filter(!is.na(year))
+
+gw_by_county
+```
+
+```{r}
+g_base <- gw_by_county %>% 
+  ggplot() +
+  geom_sf(aes(fill = af_used)) +
+    facet_wrap(vars(year))
+
+g_base
+```
+
+```{r}
+# Setting the theme
+g_base +
+  theme_void()
+
+theme_void()
+```
+
+```{r}
+g_base +
+  theme(axis.text = element_blank())
+```
+
+```{r}
+theme_for_map <-
+  theme(
+    axis.ticks       = element_blank(),
+    axis.text        = element_blank(),
+    axis.line        = element_blank(),
+    panel.border     = element_blank(),
+    panel.grid       = element_line(
+      color = "transparent"),
+    panel.background = element_blank(),
+    plot.background  = element_rect(
+      fill  = "transparent",
+      color = "transparent")
+  )
+
+g_base +
+  theme_for_map
+```
+
+```{r}
+theme_for_map_2 <- 
+  theme_void() +
+  theme(
+    strip.background = element_rect(
+      fill = "gray"
+    )
+  )
+
+g_base +
+  theme_for_map_2
+```
+
+```{r}
+p <- gw_by_county %>%
+  ggplot(aes(fill = af_used)) +
+  geom_sf() +
+  facet_grid(vars(year)) +
+  theme_bw()
+
+p
+
+p +
+  theme(
+    panel.grid = element_line(
+      color = "transparent"
+    )
+  )
+```
+
+```{r}
+g_legend <- gw_by_county %>% 
+  ggplot(aes(fill = af_used)) +
+  geom_sf() +
+  facet_wrap(vars(year)) +
+  theme_void()
+
+g_legend +
+  scale_fill_viridis_c() +
+  labs(
+    fill = "Groundwater pumping (acre-feet)"
+  ) +
+  theme(
+    legend.position   = "bottom",
+    legend.key.height = unit(0.5, "cm"),
+    legend.key.width  = unit(2, "cm"),
+    legend.text       = element_text(
+      size   = 12,
+      family = "Times"
+    ),
+    legend.title      = element_text(
+      size   = 12,
+      family = "Times"
+    )
+  ) +
+  guides(
+    fill = guide_colorbar(title.position = "top")
+  )
+```
+
+## 6.X OpenStreetMap with Dr. Dominic Royé
+
+https://dominicroye.github.io/en/2018/accessing-openstreetmap-data-with-r/
+
+```{r}
+library(osmdata)
+library(sf)
+library(ggmap)
+
+# The first five features
+available_features() %>% 
+  head()
+
+# Amenities
+available_tags("amenity") %>% 
+  head()
+
+# Shops
+available_tags("shop") %>% 
+  head()
+```
+
+```{r}
+# Building the query
+q <- getbb("Madrid") %>%
+  opq() %>%
+  add_osm_feature("amenity", "cinema")
+
+# Query structure
+q %>% 
+str() 
+```
+
+```{r}
+cinema <- osmdata_sf(q)
+cinema
+```
+
+```{r}
+# Our background map
+mad_map <- get_map(
+  getbb("Madrid"),
+  maptype = "toner-background",
+  source  = "stamen"
+)
+
+# Final map
+mad_map %>%
+  ggmap() +
+  geom_sf(
+    data        = cinema$osm_points,
+    inherit.aes = FALSE,
+    color       = "#238443",
+    fill        = "#004529",
+    alpha       = .5,
+    size        = 4,
+    shape       = 21
+  ) +
+  labs(
+    x = "",
+    y = ""
+  )
+```
+
+```{r}
+# Bounding box for the Iberian Peninsula
+m <- c(-10, 30, 5, 46)
+
+# Building the query
+q <- m %>% 
+  opq(timeout = 25*100) %>%
+  add_osm_feature("name", "Mercadona") %>%
+  add_osm_feature("shop", "supermarket")
+
+# Query
+mercadona <- osmdata_sf(q)
+
+# Final map
+ggplot(mercadona$osm_points) +
+  geom_sf(
+    color = "#08519c",
+    fill  = "#08306b",
+    alpha = .5,
+    size  = 1,
+    shape = 21
+    ) +
+  theme_void()
+```

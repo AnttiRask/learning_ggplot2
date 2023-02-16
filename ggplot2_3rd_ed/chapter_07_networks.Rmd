@@ -1,0 +1,804 @@
+---
+title: "Wickham, Hadley - ggplot2: Elegant Graphics for Data Analysis (3rd. ed.), Chapter 7 - Networks"
+author: "Original Code: Hadley Wickham (except Thomas Lin Pedersen for ggraph and tidygraph) | Modifications: Antti Rask"
+date: "2023-02-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 7 Networks
+
+```{r}
+library(tidyverse)
+library(conflicted)
+  conflict_prefer("filter", "dplyr")
+  conflict_prefer("select", "dplyr")
+```
+
+## 7.1 What is network data?
+
+### 7.1.1 A tidy network manipulation API
+
+```{r}
+library(tidygraph)
+
+graph <- play_erdos_renyi(n = 10, p = 0.2) %>%
+  activate(nodes) %>%
+  mutate(class = sample(letters[1:4], n(), replace = TRUE)) %>%
+  activate(edges) %>%
+  arrange(.N()$class[from])
+
+graph
+```
+
+### 7.1.2 Conversion
+
+```{r}
+library(ggraph)
+
+head(highschool)
+```
+
+```{r}
+hs_graph <- as_tbl_graph(highschool, directed = FALSE)
+
+hs_graph
+```
+
+```{r}
+luv_clust <- hclust(dist(luv_colours[, 1:3]))
+
+luv_graph <- as_tbl_graph(luv_clust)
+
+luv_graph
+```
+
+### 7.1.3 Algorithms
+
+```{r}
+graph %>%
+  activate(nodes) %>%
+  mutate(centrality = centrality_pagerank()) %>%
+  arrange(desc(centrality))
+```
+
+### 7.1.4 Want more?
+
+https://tidygraph.data-imaginist.com/reference/index.html
+
+## 7.2 Visualizing networks
+
+### 7.2.1 Setting up the visualization
+
+#### 7.2.1.1 Specifying a layout
+
+```{r}
+library(ggraph)
+
+hs_graph %>%
+  ggraph() + 
+  geom_edge_link() + 
+  geom_node_point()
+
+hs_graph %>%
+  ggraph(layout = "drl") + 
+  geom_edge_link() + 
+  geom_node_point()
+
+hs_graph <- hs_graph %>% 
+  activate(edges) %>% 
+  mutate(edge_weights = runif(n()))
+
+hs_graph %>%
+  ggraph(layout = "stress", weights = edge_weights) + 
+  geom_edge_link(aes(alpha = edge_weights)) + 
+  geom_node_point() + 
+  scale_edge_alpha_identity()
+```
+
+#### 7.2.1.2 Circularity
+
+```{r}
+luv_graph %>% 
+  ggraph(layout = "dendrogram", circular = TRUE) + 
+  geom_edge_link() + 
+  coord_fixed()
+
+luv_graph %>%
+  ggraph(layout = "dendrogram") + 
+  geom_edge_link() + 
+  coord_polar() + 
+  scale_y_reverse()
+```
+
+### 7.2.2 Drawing nodes
+
+```{r}
+hs_graph %>% 
+  ggraph(layout = "stress") + 
+  geom_edge_link() + 
+  geom_node_point(
+    aes(filter = centrality_degree() > 2, 
+        color = centrality_power()),
+    size = 4
+  )
+
+luv_graph %>% 
+  ggraph(layout = "treemap") + 
+  geom_node_tile(aes(fill = depth))
+```
+
+### 7.2.3 Drawing edges
+
+```{r}
+graph %>% 
+  ggraph(layout = "stress") +
+  geom_edge_link(aes(alpha = after_stat(index)))
+
+graph %>%
+  ggraph(layout = "stress") + 
+  geom_edge_link2(
+    aes(color = node.class), 
+    width = 3,
+    lineend = "round"
+  )
+
+p <- hs_graph %>%
+  ggraph(layout = "stress")
+
+p +
+  geom_edge_fan()
+
+p + 
+  geom_edge_parallel()
+
+luv_graph %>%
+  ggraph(, layout = "dendrogram", height = height) + 
+  geom_edge_elbow()
+```
+
+#### 7.2.3.1 Clipping edges around the nodes
+
+```{r}
+p <- graph %>%
+  ggraph(layout = "stress")
+
+p +
+  geom_edge_link(arrow = arrow()) +
+  geom_node_point(aes(color = class), size = 8)
+
+p +
+  geom_edge_link(
+    arrow = arrow(),
+    start_cap = circle(5, "mm"),
+    end_cap = circle(5, "mm")
+  ) +
+  geom_node_point(aes(color = class), size = 8)
+```
+
+#### 7.2.3.2 An edge is not always a line
+
+```{r}
+hs_graph %>% 
+  ggraph(layout = "matrix", sort.by = node_rank_traveller()) +
+  geom_edge_point()
+```
+
+### 7.2.4 Faceting
+
+```{r}
+p <- hs_graph %>% 
+  ggraph(layout = "stress") + 
+  geom_edge_link() + 
+  geom_node_point()
+
+p +
+  facet_edges(vars(year))
+
+p +
+  facet_nodes(~ group_spinglass())
+```
+
+## 7.X ggraph and tidygraph
+
+ggraph: https://ggraph.data-imaginist.com/index.html
+tidygraph: https://tidygraph.data-imaginist.com/
+
+### Layouts
+
+#### The ggraph() and create_layout() functions
+
+```{r}
+library(ggraph)
+library(tidygraph)
+
+set_graph_style(plot_margin = margin(1, 1, 1, 1))
+graph <- as_tbl_graph(highschool)
+
+# Not specifying the layout - defaults to "auto"
+graph %>% 
+  ggraph() + 
+  geom_edge_link(aes(color = factor(year))) + 
+  geom_node_point()
+
+graph %>%
+  ggraph(layout = 'kk') + 
+  geom_edge_link(aes(color = factor(year))) + 
+  geom_node_point()
+
+graph %>%
+  ggraph(, layout = 'kk', maxiter = 100) + 
+  geom_edge_link(aes(color = factor(year))) + 
+  geom_node_point()
+```
+
+```{r}
+layout <- create_layout(graph, layout = 'eigen')
+
+layout %>% 
+  ggraph() + 
+  geom_edge_link(aes(color = factor(year))) + 
+  geom_node_point()
+
+head(layout)
+
+attributes(layout)
+```
+
+#### Layouts abound
+
+##### A note on circularity
+
+```{r}
+# An arc diagram
+graph %>% 
+  ggraph(layout = 'linear') + 
+  geom_edge_arc(aes(color = factor(year)))
+
+# A coord diagram
+graph %>% 
+  ggraph(layout = 'linear', circular = TRUE) + 
+  geom_edge_arc(aes(color = factor(year))) + 
+  coord_fixed()
+```
+
+```{r}
+graph <- tbl_graph(flare$vertices, flare$edges)
+
+# An icicle plot
+graph %>%
+  ggraph('partition') + 
+  geom_node_tile(aes(fill = depth), size = 0.25)
+
+# A sunburst plot
+graph %>%
+  ggraph('partition', circular = TRUE) + 
+  geom_node_arc_bar(aes(fill = depth), size = 0.25) + 
+  coord_fixed()
+```
+
+##### Node-edge diagram layouts
+
+```{r}
+graph <- as_tbl_graph(highschool) %>% 
+  mutate(degree = centrality_degree())
+
+map(c('stress', 'fr', 'lgl', 'graphopt'), function(layout) {
+  ggraph(graph, layout = layout) + 
+    geom_edge_link(aes(color = factor(year)), show.legend = FALSE) +
+    geom_node_point() + 
+    labs(caption = str_c('Layout: ', layout))
+})
+```
+
+##### Hive plots
+
+```{r}
+graph <- graph %>% 
+  mutate(
+    friends = case_when(
+      centrality_degree(mode = 'in') < 5 ~ 'few',
+      TRUE ~ case_when(
+        centrality_degree(mode = 'in') >= 15 ~ 'many',
+        TRUE ~ 'medium'
+      )
+    )
+  )
+
+graph %>%
+  ggraph('hive', axis = friends, sort.by = degree) + 
+  geom_edge_hive(aes(color = factor(year))) + 
+  geom_axis_hive(aes(color = friends), size = 2, label = FALSE) + 
+  coord_fixed()
+```
+
+##### Focal layouts
+
+```{r}
+library(ggforce)
+
+graph %>%
+  ggraph( 'focus', focus = node_is_center()) + 
+  geom_circle(aes(x0 = 0, y0 = 0, r = r), tibble(r = 1:5), colour = 'grey') + 
+  geom_edge_link() + 
+  geom_node_point() + 
+  coord_fixed()
+```
+
+##### Hierarchical layouts
+
+```{r}
+graph <- tbl_graph(flare$vertices, flare$edges)
+
+set.seed(1)
+
+p <- graph %>% 
+  ggraph('circlepack', weight = size)
+
+p +
+  geom_node_circle(aes(fill = depth), size = 0.25, n = 50) +
+  coord_fixed()
+
+p + 
+  geom_edge_link() + 
+  geom_node_point(aes(colour = depth)) +
+  coord_fixed()
+
+p <- graph %>%
+  ggraph('treemap', weight = size)
+
+p + 
+  geom_node_tile(aes(fill = depth), size = 0.25)
+
+p + 
+  geom_edge_link() + 
+  geom_node_point(aes(colour = depth))
+
+ggraph(graph, 'tree') + 
+  geom_edge_diagonal()
+
+dendrogram <- hclust(dist(iris[, 1:4]))
+
+dendrogram %>%
+  ggraph('dendrogram', height = height) + 
+  geom_edge_elbow()
+
+dendrogram %>%
+  ggraph('dendrogram', circular = TRUE) + 
+  geom_edge_elbow() + 
+  coord_fixed()
+
+tree <- create_tree(100, 2, directed = FALSE) %>% 
+  activate(edges) %>% 
+  mutate(length = runif(n()))
+
+tree %>%
+  ggraph('unrooted', length = length) +
+  geom_edge_link()
+```
+
+##### Matrix layouts
+
+```{r}
+graph <- create_notable('zachary')
+
+graph %>%
+  ggraph('matrix', sort.by = node_rank_leafsort()) + 
+  geom_edge_point(mirror = TRUE) + 
+  coord_fixed()
+
+graph %>% 
+  ggraph('matrix', sort.by = node_rank_spectral()) +
+  geom_edge_point(mirror = TRUE) + 
+  coord_fixed()
+```
+
+##### Fabric layouts
+
+```{r}
+graph %>%
+  ggraph('fabric', sort.by = node_rank_fabric()) +
+  geom_node_range(colour = 'grey') +
+  geom_edge_span(end_shape = 'square') +
+  coord_fixed()
+```
+
+### Nodes
+
+```{r}
+library(ggraph)
+library(tidygraph)
+
+set_graph_style(plot_margin = margin(1, 1, 1, 1))
+gr <- as_tbl_graph(highschool)
+
+gr %>%
+  ggraph(layout = 'kk') +
+  geom_point(aes(x = x, y = y))
+
+head(create_layout(graph, layout = 'kk'))
+```
+
+#### geom_node_*()
+
+```{r}
+gr %>%
+  ggraph(layout = 'kk') + 
+  geom_node_point()
+
+gr <- tbl_graph(flare$vertices, flare$edges)
+
+gr %>%
+  ggraph(, layout = 'partition') + 
+  geom_node_tile(aes(y = -y, fill = depth))
+
+gr %>%
+  ggraph(layout = 'dendrogram', circular = TRUE) + 
+  geom_edge_diagonal() + 
+  geom_node_point(aes(filter = leaf)) + 
+  coord_fixed()
+```
+
+#### The different node geoms
+
+```{r}
+graph <- create_notable('meredith') %>% 
+  mutate(group = sample(c('A', 'B'), n(), TRUE))
+
+graph %>%
+  ggraph('stress') + 
+  geom_node_voronoi(aes(fill = group), max.radius = 1) + 
+  geom_node_point() + 
+  geom_edge_link() + 
+  coord_fixed()
+
+gr %>%
+  ggraph(layout = 'treemap', weight = size) + 
+  geom_node_tile(aes(fill = depth))
+
+l <- gr %>% 
+  ggraph(layout = 'partition', circular = TRUE)
+
+l +
+  geom_node_arc_bar(aes(fill = depth)) + 
+  coord_fixed()
+
+l + geom_edge_diagonal() + 
+  geom_node_point(aes(colour = depth)) + 
+  coord_fixed()
+```
+
+### Edges
+
+#### Meet the geom_edge_*() family
+
+```{r}
+library(ggraph)
+library(rlang)
+library(tidygraph)
+
+set_graph_style(plot_margin = margin(1, 1, 1, 1))
+
+hierarchy <- as_tbl_graph(hclust(dist(iris[, 1:4]))) %>% 
+  
+  mutate(Class = map_bfs_back_chr(node_is_root(), .f = function(node, path, ...) {
+    
+    if (leaf[node]) {
+      
+      as.character(iris$Species[as.integer(label[node])])
+      
+    } else {
+      
+      species <- unique(unlist(path$result))
+      
+      if (length(species) == 1) {
+        
+        species
+        
+      } else {
+        
+        NA_character_
+        
+      }
+      
+    }
+    
+  }))
+
+hairball <- as_tbl_graph(highschool) %>% 
+  mutate(
+    year_pop = map_local(mode = 'in', .f = function(neighborhood, ...) {
+      neighborhood %E>% pull(year) %>% table() %>% sort(decreasing = TRUE)
+    }),
+    pop_devel = map_chr(year_pop, function(pop) {
+      if (length(pop) == 0 || length(unique(pop)) == 1) return('unchanged')
+      switch(names(pop)[which.max(pop)],
+             '1957' = 'decreased',
+             '1958' = 'increased')
+    }),
+    popularity = map_dbl(year_pop, ~ .[1]) %|% 0
+  ) %>%
+  activate(edges) %>%
+  mutate(year = as.character(year))
+```
+
+##### Link
+
+```{r}
+p <- hairball %>%
+  ggraph(layout = 'stress') 
+
+p + 
+  geom_edge_link(aes(colour = year))
+```
+
+##### Fan
+
+```{r}
+p + 
+  geom_edge_fan(aes(colour = year))
+```
+
+##### Parallel
+
+```{r}
+p +
+  geom_edge_parallel(aes(colour = year))
+```
+
+##### Loops
+
+```{r}
+# let's make some of the student love themselves
+loopy_hairball <- hairball %>% 
+  bind_edges(tibble(from = 1:5, to = 1:5, year = rep('1957', 5)))
+
+loopy_hairball %>%
+ggraph(layout = 'stress') + 
+  geom_edge_link(aes(colour = year), alpha = 0.25) + 
+  geom_edge_loop(aes(colour = year))
+```
+
+##### Density
+
+```{r}
+p + 
+  geom_edge_density(aes(fill = year)) + 
+  geom_edge_link(alpha = 0.25)
+```
+
+##### Arcs
+
+```{r}
+hairball %>%
+  ggraph(layout = 'linear') +
+  geom_edge_arc(aes(colour = year))
+
+hairball %>%
+ggraph(layout = 'linear', circular = TRUE) + 
+  geom_edge_arc(aes(colour = year)) + 
+  coord_fixed()
+```
+
+##### Elbow
+
+```{r}
+p <- hierarchy %>%
+  ggraph(layout = 'dendrogram', height = height)
+
+p +
+  geom_edge_elbow()
+```
+
+##### Diagonals
+
+```{r}
+p + 
+  geom_edge_diagonal()
+```
+
+##### Bends
+
+```{r}
+p +
+  geom_edge_bend()
+```
+
+##### Hive
+
+```{r}
+hairball %>%
+ggraph(layout = 'hive', axis = pop_devel, sort.by = popularity) + 
+  geom_edge_hive(aes(colour = year)) + 
+  geom_axis_hive(label = FALSE) + 
+  coord_fixed()
+```
+
+##### Span
+
+```{r}
+hairball %>%
+  ggraph(layout = 'fabric', sort.by = node_rank_fabric()) + 
+  geom_node_range(colour = 'grey') + 
+  geom_edge_span(end_shape = 'circle') + 
+  coord_fixed()
+```
+
+##### Point and tile
+
+```{r}
+p <- ggraph(hairball, layout = 'matrix', sort.by = bfs_rank())
+
+p +
+  geom_edge_point() + 
+  coord_fixed()
+
+p +
+  geom_edge_tile() + 
+  coord_fixed()
+```
+
+#### The three types of edge geoms
+
+##### Base variant
+
+```{r}
+hairball %>%
+  ggraph(layout = 'linear') + 
+  geom_edge_arc(aes(colour = year, alpha = after_stat(index))) +
+  scale_edge_alpha('Edge direction', guide = 'edge_direction')
+```
+
+##### 2-variant
+
+```{r}
+hierarchy %>%
+ggraph(layout = 'dendrogram', height = height) +
+  geom_edge_elbow2(aes(colour = node.Class))
+```
+
+#### Edge strength
+
+```{r}
+small_tree <- create_tree(5, 2)
+
+ggraph(small_tree, 'dendrogram') + 
+  geom_edge_elbow(strength = 0.75)
+
+ggraph(small_tree, 'dendrogram') + 
+  geom_edge_diagonal(strength = 0.5)
+```
+
+#### Decorating edges
+
+```{r}
+# Random names - I swear
+simple <- create_notable('bull') %>% 
+  mutate(name = c('Thomas', 'Bob', 'Hadley', 'Winston', 'Baptiste')) %>% 
+  activate(edges) %>% 
+  mutate(type = sample(c('friend', 'foe'), 5, TRUE))
+```
+
+##### Arrows
+
+```{r}
+simple %>% 
+  ggraph(layout = 'graphopt') +
+  geom_edge_link(arrow = arrow(length = unit(4, 'mm'))) +
+  geom_node_point(size = 5)
+
+simple %>%
+  ggraph(layout = 'graphopt') + 
+  geom_edge_link(
+    arrow = arrow(length = unit(4, 'mm')), end_cap = circle(3, 'mm')
+  ) +
+  geom_node_point(size = 5)
+
+simple %>%
+  ggraph(layout = 'linear', circular = TRUE) +
+  geom_edge_arc(
+    arrow = arrow(length = unit(4, 'mm')), start_cap = circle(3, 'mm'), end_cap = circle(3, 'mm')
+  ) +
+  geom_node_point(size = 5) +
+  coord_fixed()
+
+simple %>%
+  ggraph(layout = 'graphopt') +
+  geom_edge_link(
+    aes(start_cap = label_rect(node1.name), end_cap = label_rect(node2.name)),
+    arrow = arrow(length = unit(4, 'mm'))
+  ) + 
+  geom_node_text(aes(label = name))
+```
+
+##### Labels
+
+```{r}
+simple %>%
+  ggraph(layout = 'graphopt') +
+  geom_edge_link(aes(label = type), arrow = arrow(length = unit(4, 'mm')), end_cap = circle(3, 'mm')) +
+  geom_node_point(size = 5)
+
+simple %>% 
+  ggraph(layout = 'graphopt') +
+  geom_edge_link(
+    aes(label   = type),
+    angle_calc  = 'along',
+    label_dodge = unit(2.5, 'mm'),
+    arrow       = arrow(length = unit(4, 'mm')),
+    end_cap     = circle(3, 'mm')) + 
+  geom_node_point(size = 5)
+```
+
+#### Connections
+
+```{r}
+flaregraph <- tbl_graph(flare$vertices, flare$edges)
+from       <- match(flare$imports$from, flare$vertices$name)
+to         <- match(flare$imports$to, flare$vertices$name)
+
+flaregraph %>%
+  ggraph(layout = 'dendrogram', circular = TRUE) +
+  geom_conn_bundle(data = get_con(from = from, to = to), alpha = 0.1) +
+  coord_fixed()
+```
+
+
+### Tidygraph interface
+
+Original from: https://ggraph.data-imaginist.com/articles/tidygraph.html
+
+#### NSE in layout specifications
+
+```{r}
+library(tidygraph)
+
+graph <- as_tbl_graph(
+  tibble(
+    from = sample(5, 20, TRUE),
+    to = sample(5, 20, TRUE),
+    weight = runif(20)
+  )
+)
+
+graph
+
+```
+
+```{r}
+graph %>%
+ggraph(layout = 'fr', weights = weight) +
+  geom_edge_link() + 
+  geom_node_point()
+
+graph %>%
+ggraph(layout = 'fr', weights = exp(weight)) +
+  geom_edge_link() +
+  geom_node_point()
+```
+
+#### Access to tidygraph algorithms in ggraph code
+
+```{r}
+graph <- create_notable('zachary')
+
+graph %>%
+  ggraph(layout = 'fr') + 
+  geom_edge_link() + 
+  geom_node_point(aes(size = centrality_pagerank())) + 
+  theme(legend.position = 'bottom')
+
+graph %>%
+  ggraph('matrix', sort.by = node_rank_leafsort()) +
+  geom_edge_point(aes(colour = centrality_edge_betweenness()), mirror = TRUE) +
+  theme(legend.position = 'bottom')
+
+graph %>%
+  ggraph('fr') + 
+  geom_edge_link() + 
+  geom_node_point() + 
+  facet_nodes(~ group_infomap())
+```
