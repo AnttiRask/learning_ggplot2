@@ -638,7 +638,7 @@ I opened an issue about it (https://github.com/hadley/ggplot2-book/issues/338#is
 
 While waiting for the update, I'll include another example: https://tmieno2.github.io/R-as-GIS-for-Economists/create-maps.html
 
-#### 3.7.3.1 Creating maps from sf objects
+#### Creating maps from sf objects
 
 ```{r}
 # Read in the KS wells data
@@ -875,7 +875,7 @@ p +
   )
 ```
 
-#### 3.7.3.2 Arranging maps
+#### Arranging maps
 
 ```{r}
 # Inset
@@ -953,7 +953,7 @@ g_region +
   theme_void()
 ```
 
-#### 3.7.3.3 Fine-tuning maps for publication
+#### Fine-tuning maps for publication
 
 ```{r}
 gw_by_county <- st_join(
