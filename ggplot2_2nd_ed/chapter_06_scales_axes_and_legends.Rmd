@@ -15,7 +15,6 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(conflicted)
   conflict_prefer("filter", "dplyr")
-  conflict_prefer("select", "dplyr")
 ```
 
 ## 6.2 Modifying Scales

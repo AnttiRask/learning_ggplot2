@@ -13,9 +13,6 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 library(tidyverse)
-library(conflicted)
-  conflict_prefer("filter", "dplyr")
-  conflict_prefer("select", "dplyr")
 ```
 
 ## 7.1 What is network data?
@@ -121,8 +118,9 @@ hs_graph %>%
   ggraph(layout = "stress") + 
   geom_edge_link() + 
   geom_node_point(
-    aes(filter = centrality_degree() > 2, 
-        color = centrality_power()),
+    aes(
+      filter = centrality_degree() > 2, 
+      color  = centrality_power()),
     size = 4
   )
 

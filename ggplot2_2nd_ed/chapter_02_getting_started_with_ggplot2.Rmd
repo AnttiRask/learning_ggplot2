@@ -14,7 +14,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(tidyverse)
 library(conflicted)
-  conflict_prefer("filter", "dplyr")
   conflict_prefer("select", "dplyr")
 ```
 
@@ -291,8 +290,6 @@ p +
   geom_smooth(span = 1)
 ```
 
-#### mgcv
-
 ```{r}
 library(mgcv)
 
@@ -394,8 +391,6 @@ economics %>%
   ggplot(aes(date, uempmed)) +
   geom_line()
 ```
-
-#### lubridate
 
 ```{r}
 library(lubridate)

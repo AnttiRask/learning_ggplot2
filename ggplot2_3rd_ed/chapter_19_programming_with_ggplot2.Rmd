@@ -1,6 +1,6 @@
 ---
 title: "Wickham, Hadley - ggplot2: Elegant Graphics for Data Analysis (3rd ed.), Chapter 19 - Programming with ggplot2"
-author: "Original Code: Hadley Wickham (except Claus O. Wilke for cowplot) | Modifications: Antti Rask"
+author: "Original Code: Hadley Wickham | Modifications: Antti Rask"
 date: "2023-01-21"
 output: html_document
 ---
@@ -13,9 +13,6 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 library(tidyverse)
-library(conflicted)
-  conflict_prefer("filter", "dplyr")
-  conflict_prefer("select", "dplyr")
 ```
 
 ## 19.2 Single components

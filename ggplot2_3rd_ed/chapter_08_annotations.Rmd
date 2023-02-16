@@ -15,7 +15,6 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(conflicted)
   conflict_prefer("filter", "dplyr")
-  conflict_prefer("select", "dplyr")
 ```
 
 ## 8.1 Plot and axis titles
@@ -440,30 +439,61 @@ mpg %>%
   facet_wrap(vars(cyl))
 ```
 
-## 8.X
+## 8.X ggfittext
 
-### ggfittext
+Original from: https://github.com/wilkox/ggfittext
+
+### Fitting text inside a box
 
 ```{r}
 library(ggfittext)
 
-altitudes %>% 
-  ggplot(aes(x = craft, y = altitude, label = altitude)) +
+p <- animals %>%
+  ggplot(aes(type, flies, label = animal)) +
+  geom_tile(fill = "white", color = "black")
+
+p +
+  geom_fit_text()
+```
+
+### Reflowing text
+
+```{r}
+p +
+  geom_fit_text(reflow = TRUE)
+```
+
+### Growing text
+
+```{r}
+p +
+  geom_fit_text(reflow = TRUE, grow = TRUE)
+```
+
+### Placing text
+
+```{r}
+p +
+  geom_fit_text(place = "topleft", reflow = TRUE)
+```
+
+### Bar plots
+
+```{r}
+altitudes %>%
+  ggplot(aes(craft, altitude, label = altitude)) +
   geom_col() +
   geom_bar_text()
+```
 
+```{r}
 p <- beverages %>%
   ggplot(
-    aes(
-      x     = beverage,
-      y     = proportion,
-      label = ingredient,
-      fill  = ingredient
-    )
+    aes(beverage, proportion, label = ingredient, fill = ingredient)
   )
 
 p +
-  geom_col(position      = "stack") +
+  geom_col(position = "stack") +
   geom_bar_text(position = "stack", reflow = TRUE)
 
 p +
@@ -477,3 +507,49 @@ p +
   coord_flip()
 ```
 
+### Specifying the box limits
+
+```{r}
+presidential %>%
+  ggplot(
+    aes(
+      ymin = start, ymax = end, x = party, label = name)
+  ) +
+  geom_fit_text(grow = TRUE) +
+  geom_errorbar(alpha = 0.5)
+```
+
+### Experimental feature: text in polar coordinates
+
+```{r}
+gold %>%
+  ggplot(
+    aes(
+      xmin  = xmin,
+      xmax  = xmax,
+      ymin  = ymin,
+      ymax  = ymax,
+      fill  = linenumber,
+      label = line
+    )
+  ) +
+  coord_polar() +
+  geom_rect() +
+  geom_fit_text(min.size = 0, grow = TRUE) +
+  scale_fill_gradient(low = "#fee391", high = "#238443")
+```
+
+### Other useful arguments
+
+```{r}
+animals %>%
+  ggplot(
+    aes(type, flies, fill = mass, label = animal)
+  ) +
+  geom_tile() +
+  geom_fit_text(
+    reflow   = TRUE,
+    grow     = TRUE,
+    contrast = TRUE
+  )
+```

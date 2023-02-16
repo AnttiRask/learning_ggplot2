@@ -13,9 +13,6 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 library(tidyverse)
-library(conflicted)
-  conflict_prefer("filter", "dplyr")
-  conflict_prefer("select", "dplyr")
 ```
 
 ## 8.1 Introduction

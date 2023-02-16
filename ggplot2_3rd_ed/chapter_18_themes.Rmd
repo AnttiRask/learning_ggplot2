@@ -1,6 +1,6 @@
 ---
 title: "Wickham, Hadley - ggplot2: Elegant Graphics for Data Analysis (3rd ed.), Chapter 18 - Themes"
-author: "Original Code: Hadley Wickham | Modifications: Antti Rask"
+author: "Original Code: Hadley Wickham (except Hiroaki Yutani for gghighlight and Jeffrey Arnold for ggthemes) | Modifications: Antti Rask"
 date: "2023-01-20"
 output: html_document
 ---
@@ -13,9 +13,6 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 library(tidyverse)
-library(conflicted)
-  conflict_prefer("filter", "dplyr")
-  conflict_prefer("select", "dplyr")
 ```
 
 ## 18.1 Introduction
@@ -521,9 +518,10 @@ p
 ggsave("output/output2.pdf")
 ```
 
-## 18.X
+## 18.X gghighlight + ggthemes (an example)
 
-### gghighlight + ggthemes (an example)
+gghighlight: https://yutannihilation.github.io/gghighlight/
+ggthemes: https://yutannihilation.github.io/allYourFigureAreBelongToUs/ggthemes/
 
 ```{r}
 library(gghighlight)

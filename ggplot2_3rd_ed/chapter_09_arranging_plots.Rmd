@@ -12,11 +12,8 @@ knitr::opts_chunk$set(echo = TRUE)
 # 9 Arranging plots
 
 ```{r}
-library(tidyverse)
-library(conflicted)
-  conflict_prefer("filter", "dplyr")
-  conflict_prefer("select", "dplyr")
 library(patchwork)
+library(tidyverse)
 ```
 
 ## 9.1 Laying out plots side by side
@@ -225,141 +222,6 @@ p12 &
 
 p12 +
   plot_annotation(tag_levels = "A")
-```
-
-## 9.3 Wrapping up
-
-Original from: https://patchwork.data-imaginist.com/
-
-### Adding non-ggplot content
-```{r}
-library(grid)
-library(gridExtra)
-
-p1 + 
-  textGrob('Some really important text')
-
-
-wrap_elements(textGrob('Text on left side')) + p1
-
-p1 +
-  tableGrob(mtcars[1:10, c('mpg', 'disp')])
-```
-
-```{r}
-# 1
-p1 + 
-  ~plot(mtcars$mpg, mtcars$disp, main = 'Plot 2')
-
-# 2
-old_par <- par(mar = c(0, 2, 0, 0), bg = NA)
-
-p1 +
-  wrap_elements(panel = ~plot(mtcars$mpg, mtcars$disp), clip = FALSE)
-
-par(old_par)
-
-old_par <- par(mar = c(0, 0, 0, 0), mgp = c(1, 0.25, 0), 
-               bg = NA, cex.axis = 0.75, las = 1, tcl = -0.25)
-
-# 3
-p1 + 
-  wrap_elements(panel = ~plot(mtcars$mpg, mtcars$disp), clip = FALSE) +
-  ggtitle('Plot 2') +
-  theme(plot.margin = margin(5.5, 5.5, 5.5, 35))
-
-par(old_par)
-```
-
-### Adding an empty area
-
-```{r}
-p1 + 
-  plot_spacer() +
-  p2 + 
-  plot_spacer() + 
-  p3 + 
-  plot_spacer()
-
-# Spacers in separate nesting levels may have different dimensions
-(p1 + plot_spacer() + p2) / (plot_spacer() + p3 + plot_spacer())
-``` 
-
-### Moving beyond the grid
-
-```{r}
-layout <- c(
-  area(t = 2, l = 1, b = 5, r = 4),
-  area(t = 1, l = 3, b = 3, r = 5)
-)
-
-p1 + p2 + 
-  plot_layout(design = layout)
-```
-
-```{r}
-layout <- '
-A#B
-#C#
-D#E
-'
-wrap_plots(
-  D      = p1,
-  C      = p2,
-  B      = p3,
-  design = layout
-)
-```
-
-### Fixed aspect plots
-
-```{r}
-p_fixed <- mtcars %>% 
-  ggplot(aes(hp, disp)) + 
-  geom_point() + 
-  ggtitle("Plot F") + 
-  coord_fixed()
-
-p_fixed + p1 + p2 + p3
-
-p_fixed + p1 + p2 + p3 +
-  plot_layout(widths = 1)
-```
-
-### Alignment across multiple pages
-
-```{r, include = FALSE}
-p3_dims    <- get_dim(p3)
-p1_aligned <- set_dim(p1, p3_dims)
-```
-
-```{r}
-plot(p1_aligned)
-
-p1_aligned +
-  theme_minimal()
-
-plot(p3)
-```
-
-```{r, include=FALSE}
-max_dims <- get_max_dim(p1, p2, p3, p4)
-```
-
-```{r}
-set_dim(p4, max_dims)
-
-set_dim(p2, max_dims)
-```
-
-```{r, include=FALSE}
-plots_aligned <- align_patches(p1, p2, p3, p4)
-```
-
-```{r}
-for (p in plots_aligned) {
-  plot(p)
-}
 ```
 
 ## 9.X
@@ -673,4 +535,140 @@ tbl %>%
   ) +
   theme_cleveland()
 
+```
+
+### patchwork
+
+Original from: https://patchwork.data-imaginist.com/
+
+#### Adding non-ggplot content
+
+```{r}
+library(grid)
+library(gridExtra)
+
+p1 + 
+  textGrob('Some really important text')
+
+
+wrap_elements(textGrob('Text on left side')) + p1
+
+p1 +
+  tableGrob(mtcars[1:10, c('mpg', 'disp')])
+```
+
+```{r}
+# 1
+p1 + 
+  ~plot(mtcars$mpg, mtcars$disp, main = 'Plot 2')
+
+# 2
+old_par <- par(mar = c(0, 2, 0, 0), bg = NA)
+
+p1 +
+  wrap_elements(panel = ~plot(mtcars$mpg, mtcars$disp), clip = FALSE)
+
+par(old_par)
+
+old_par <- par(mar = c(0, 0, 0, 0), mgp = c(1, 0.25, 0), 
+               bg = NA, cex.axis = 0.75, las = 1, tcl = -0.25)
+
+# 3
+p1 + 
+  wrap_elements(panel = ~plot(mtcars$mpg, mtcars$disp), clip = FALSE) +
+  ggtitle('Plot 2') +
+  theme(plot.margin = margin(5.5, 5.5, 5.5, 35))
+
+par(old_par)
+```
+
+#### Adding an empty area
+
+```{r}
+p1 + 
+  plot_spacer() +
+  p2 + 
+  plot_spacer() + 
+  p3 + 
+  plot_spacer()
+
+# Spacers in separate nesting levels may have different dimensions
+(p1 + plot_spacer() + p2) / (plot_spacer() + p3 + plot_spacer())
+``` 
+
+#### Moving beyond the grid
+
+```{r}
+layout <- c(
+  area(t = 2, l = 1, b = 5, r = 4),
+  area(t = 1, l = 3, b = 3, r = 5)
+)
+
+p1 + p2 + 
+  plot_layout(design = layout)
+```
+
+```{r}
+layout <- '
+A#B
+#C#
+D#E
+'
+wrap_plots(
+  D      = p1,
+  C      = p2,
+  B      = p3,
+  design = layout
+)
+```
+
+#### Fixed aspect plots
+
+```{r}
+p_fixed <- mtcars %>% 
+  ggplot(aes(hp, disp)) + 
+  geom_point() + 
+  ggtitle("Plot F") + 
+  coord_fixed()
+
+p_fixed + p1 + p2 + p3
+
+p_fixed + p1 + p2 + p3 +
+  plot_layout(widths = 1)
+```
+
+#### Alignment across multiple pages
+
+```{r, include = FALSE}
+p3_dims    <- get_dim(p3)
+p1_aligned <- set_dim(p1, p3_dims)
+```
+
+```{r}
+plot(p1_aligned)
+
+p1_aligned +
+  theme_minimal()
+
+plot(p3)
+```
+
+```{r, include=FALSE}
+max_dims <- get_max_dim(p1, p2, p3, p4)
+```
+
+```{r}
+set_dim(p4, max_dims)
+
+set_dim(p2, max_dims)
+```
+
+```{r, include=FALSE}
+plots_aligned <- align_patches(p1, p2, p3, p4)
+```
+
+```{r}
+for (p in plots_aligned) {
+  plot(p)
+}
 ```
