@@ -1,0 +1,209 @@
+---
+title: "Wickham, Hadley - ggplot2: Elegant Graphics for Data Analysis (3rd ed.), Chapter 20 - Internals of ggplot2"
+author: "Antti Rask"
+date: "2023-02-13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 20 Internals of ggplot2
+
+```{r}
+library(tidyverse)
+```
+
+## 20.1 The plot() method
+
+```{r}
+library(grid)
+
+p <- mpg %>% 
+    ggplot(aes(displ, hwy, color = drv)) +
+    geom_point(position = "jitter") +
+    geom_smooth(method = "lm", formula = y ~ x) +
+    facet_wrap(vars(year)) +
+    ggtitle("A plot for expository purposes")
+
+ggprint  <- function(x) {
+    data   <- ggplot_build(x)
+    gtable <- ggplot_gtable(data)
+    grid.newpage()
+    grid.draw(gtable)
+    return(invisible(x))
+}
+
+ggprint(p)
+```
+
+## 20.3 The gtable step
+
+### 20.3.4 Output
+
+```{r}
+p_built  <- ggplot_build(p)
+p_gtable <- ggplot_gtable(p_built)
+
+class(p_gtable)
+
+p_gtable
+```
+
+```{r}
+library(grid)
+
+grid.newpage()
+grid.draw(p_gtable)
+```
+
+## 20.4 Introducing ggproto
+
+### 20.4.1 ggproto objects
+
+```{r}
+NewObject <- ggproto(
+    `_class`    = NULL, 
+    `_inherits` = NULL
+)
+
+NewObject <- ggproto(NULL, NULL)
+
+NewObject
+```
+
+### 20.4.2 Creating new classes
+
+```{r}
+NewClass <- ggproto("NewClass", NULL)
+
+NewClass
+```
+
+```{r}
+Person <- ggproto("Person", NULL,
+                  
+                  # fields                  
+                  given_name  = NA,
+                  family_name = NA,
+                  birth_date  = NA,
+                  
+                  # methods
+                  full_name = function(self, family_last = TRUE) {
+                      if(family_last == TRUE) {
+                          return(paste(self$given_name, self$family_name))
+                      }
+                      return(paste(self$family_name, self$given_name))
+                  },
+                  age = function(self) {
+                      days_old <- Sys.Date() - self$birth_date
+                      floor(as.integer(days_old) / 365.25)
+                  },
+                  description = function(self) {
+                      paste(self$full_name(), "is", self$age(), "years old")
+                  }
+)
+
+Person
+
+Person$full_name
+```
+
+### 20.4.3 Creating new instances
+
+```{r}
+Thomas <- ggproto(NULL, Person,
+                  given_name  = "Thomas Lin",
+                  family_name = "Pedersen",
+                  birth_date  = as.Date("1985/10/12")
+)
+
+Danielle <- ggproto(NULL, Person,
+                    given_name  = "Danielle Jasmine",
+                    family_name = "Navarro",
+                    birth_date  = as.Date("1977/09/12")
+)
+
+Thomas$description()
+Danielle$description()
+```
+
+### 20.4.4 Creating subclasses
+
+```{r}
+# define the subclass
+NewSubClass <- ggproto("NewSubClass", Person)
+
+# verify that this works
+NewSubClass
+```
+
+```{r}
+Royalty <- ggproto(
+    "Royalty",
+    Person,
+    rank      = NA,
+    territory = NA,
+    full_name = function(self) {
+        paste(
+            self$rank,
+            self$given_name,
+            "of",
+            self$territory
+        )
+    }
+)
+
+Victoria <- ggproto(NULL, Royalty,
+                    given_name  = "Victoria",
+                    family_name = "Hanover",
+                    rank        = "Queen",
+                    territory   = "the United Kingdom",
+                    birth_date  = as.Date("1819/05/24")
+)
+
+Victoria$full_name()
+
+Victoria$description()
+```
+
+```{r}
+Police <- ggproto(
+    "Police",
+    Person,
+    rank        = NA,
+    description = function(self) {
+        paste(
+            self$rank,
+            ggproto_parent(Person, self)$description()
+        )
+    }
+)
+
+John <- ggproto(
+    NULL,
+    Police,
+    given_name  = "John",
+    family_name = "McClane",
+    rank        = "Detective",
+    birth_date  = as.Date("1955/03/19")
+)
+
+John$full_name()
+John$description()
+```
+
+### 20.4.5 Style guide for ggproto
+
+```{r}
+GeomErrorbar <- ggproto(
+  # ...
+  setup_params = function(data, params) {
+    GeomLinerange$setup_params(data, params)
+  }
+  # ...
+)
+
+GeomErrorbar
+```
