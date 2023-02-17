@@ -518,7 +518,71 @@ p
 ggsave("output/output2.pdf")
 ```
 
-## 18.X gghighlight + ggthemes (an example)
+## 18.X
+
+### gganimate
+
+Original from: https://gganimate.com/
+
+#### An Example
+
+```{r}
+library(gganimate)
+
+mtcars %>%
+  ggplot(aes(factor(cyl), mpg)) + 
+  geom_boxplot() + 
+  # Here comes the gganimate code
+  transition_states(
+    gear,
+    transition_length = 2,
+    state_length      = 1
+  ) +
+  enter_fade() + 
+  exit_shrink() +
+  ease_aes('sine-in-out')
+```
+
+#### Yet Another Example
+
+```{r}
+library(gapminder)
+
+gapminder %>%
+    ggplot(
+      aes(
+        gdpPercap,
+        lifeExp,
+        size = pop,
+        color = country
+        )
+    ) +
+  geom_point(alpha = 0.7, show.legend = FALSE) +
+  scale_color_manual(values = country_colors) +
+  scale_size(range = c(2, 12)) +
+  scale_x_log10() +
+  facet_wrap(vars(continent)) +
+  # Here comes the gganimate specific bits
+  labs(
+    title = 'Year: {frame_time}',
+    x     = 'GDP per capita',
+    y     = 'life expectancy'
+  ) +
+  transition_time(year) +
+  ease_aes('linear')
+```
+
+#### Where is my animation?
+
+```{r}
+anim_save(
+  filename  = "last_animation.gif",
+  animation = last_animation(),
+  path      = "output/"
+)
+```
+
+### gghighlight + ggthemes (an example)
 
 gghighlight: https://yutannihilation.github.io/gghighlight/
 ggthemes: https://yutannihilation.github.io/allYourFigureAreBelongToUs/ggthemes/
