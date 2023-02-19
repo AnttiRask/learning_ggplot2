@@ -541,6 +541,30 @@ tbl %>%
 
 Original from: https://patchwork.data-imaginist.com/
 
+```{r}
+p1 <- mtcars %>%
+  ggplot(aes(mpg, disp)) + 
+  geom_point() + 
+  ggtitle('Plot 1')
+
+p2 <- mtcars %>%
+  ggplot(aes(gear, disp, group = gear)) +
+  geom_boxplot() +
+  ggtitle('Plot 2')
+
+p3 <- mtcars %>% 
+  ggplot(aes(hp, wt, colour = mpg)) + 
+  geom_point() +
+  ggtitle('Plot 3')
+
+p4 <- mtcars %>%
+  ggplot(aes(gear)) + 
+  geom_bar() + 
+  facet_wrap(vars(cyl)) + 
+  ggtitle('Plot 4')
+```
+
+
 #### Adding non-ggplot content
 
 ```{r}
@@ -614,6 +638,7 @@ A#B
 #C#
 D#E
 '
+
 wrap_plots(
   D      = p1,
   C      = p2,

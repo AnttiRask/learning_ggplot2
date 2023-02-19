@@ -1,6 +1,6 @@
 ---
 title: "Wickham, Hadley - ggplot2: Elegant Graphics for Data Analysis (3rd ed.), Chapter 18 - Themes"
-author: "Original Code: Hadley Wickham (except Hiroaki Yutani for gghighlight and Jeffrey Arnold for ggthemes) | Modifications: Antti Rask"
+author: "Original Code: Hadley Wickham (except Thomas Lin Pedersen for gganimate, Hiroaki Yutani for gghighlight and Jeffrey Arnold for ggthemes) | Modifications: Antti Rask"
 date: "2023-01-20"
 output: html_document
 ---
@@ -527,6 +527,8 @@ Original from: https://gganimate.com/
 #### An Example
 
 ```{r}
+# You need to install the {gifski} package or the animation won't work!
+
 library(gganimate)
 
 mtcars %>%
@@ -541,6 +543,14 @@ mtcars %>%
   enter_fade() + 
   exit_shrink() +
   ease_aes('sine-in-out')
+```
+
+```{r}
+anim_save(
+  filename  = "last_animation.gif",
+  animation = last_animation(),
+  path      = "output/"
+)
 ```
 
 #### Yet Another Example
@@ -572,11 +582,31 @@ gapminder %>%
   ease_aes('linear')
 ```
 
-#### Where is my animation?
+```{r}
+anim_save(
+  filename  = "last_animation_2.gif",
+  animation = last_animation(),
+  path      = "output/"
+)
+```
+
+#### I don’t like gifs…
+
+```{r}
+# You need to install the {transformr} package and ffmpeg on the computer or the animation won't work!
+
+p <- airquality %>% 
+  ggplot(aes(Day, Temp)) + 
+  geom_line(linewidth = 2, colour = 'steelblue') + 
+  transition_states(Month, 4, 1) + 
+  shadow_mark(size = 1, colour = 'grey')
+
+animate(p, renderer = ffmpeg_renderer())
+```
 
 ```{r}
 anim_save(
-  filename  = "last_animation.gif",
+  filename  = "last_animation.mp4",
   animation = last_animation(),
   path      = "output/"
 )

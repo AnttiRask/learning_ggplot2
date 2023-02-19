@@ -392,11 +392,3 @@ p +
 p +
   geom_jitter(width = 0.05, height = 0.5)
 ```
-
-
-
-
-
-
-
-

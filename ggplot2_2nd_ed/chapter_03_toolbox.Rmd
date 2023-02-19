@@ -577,18 +577,20 @@ p +
 ```
 
 ```{r}
-library(lubridate)
-library(USAboundaries)
+# I'm commenting this one out, because I hanven't been able to succesfully install the USAboundariesData package that is needed for the USAboundaries package to work.
 
-c18    <- usboundaries(date("1820-01-01"))
-c18tbl <- fortify(c18) %>% as_tibble()
-
-head(c18tbl)
-
-c18tbl %>%
-  ggplot(aes(long, lat, group = group)) +
-  geom_polygon(color = "grey50", fill = NA) +
-  coord_sf()
+# library(lubridate)
+# library(USAboundaries)
+# 
+# c18    <- usboundaries(date("1820-01-01"))
+# c18tbl <- fortify(c18) %>% as_tibble()
+# 
+# head(c18tbl)
+# 
+# c18tbl %>%
+#   ggplot(aes(long, lat, group = group)) +
+#   geom_polygon(color = "grey50", fill = NA) +
+#   coord_sf()
 ```
 
 ### 3.7.2 Point Metadata
