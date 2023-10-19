@@ -633,12 +633,7 @@ mi_cities %>%
 
 ### 3.7.3 Raster Images
 
-There was a problem with the {bomrang} package and it has been archived. So, the example code for the 3rd
-edition doesn't work as it is.
-
-I opened an issue about it (https://github.com/hadley/ggplot2-book/issues/338#issuecomment-1422203499), but so far there is no idea how Hadley & co. are going to replace the chapter.
-
-While waiting for the update, I'll include another example: https://tmieno2.github.io/R-as-GIS-for-Economists/create-maps.html
+There was a problem with the code in the book (2nd ed) that couldn't be solved. That's why I found another example online: https://tmieno2.github.io/R-as-GIS-for-Economists/create-maps.html
 
 #### Creating maps from sf objects
 
@@ -1451,7 +1446,6 @@ close3d()
 ```
 
 ```{r}
-library(rgl)
 library(MASS)
 
 set.seed(123)
@@ -1488,7 +1482,6 @@ close3d()
 ```
 
 ```{r}
-library(rgl)
 triangles3d(
   cbind(
     x = rnorm(9),
@@ -1511,9 +1504,8 @@ close3d()
 https://dominicroye.github.io/en/2018/accessing-openstreetmap-data-with-r/
 
 ```{r}
-library(osmdata)
-library(sf)
 library(ggmap)
+library(osmdata)
 
 # The first five features
 available_features() %>% 

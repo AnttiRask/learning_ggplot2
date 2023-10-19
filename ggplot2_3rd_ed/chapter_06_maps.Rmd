@@ -66,7 +66,6 @@ oz_states %>%
 ### 6.2.1 Layered maps
 
 ```{r}
-library(ozmaps)
 library(rmapshaper)
 
 oz_states <- ozmap_states %>%
@@ -87,7 +86,6 @@ ggplot() +
 ### 6.2.2 Labelled maps
 
 ```{r}
-library(ozmaps)
 # Filter electorates in the Sydney metropolitan region
 sydney_map <- abs_ced %>%
   filter(
@@ -185,8 +183,6 @@ p +
 ## 6.4 Working with sf data
 
 ```{r}
-library(ozmaps)
-
 edenmonaro <- abs_ced %>%
   filter(NAME == "Eden-Monaro")
 
@@ -223,7 +219,6 @@ st_cast(edenmonaro_geometry, "POLYGON")
 ```
 
 ```{r}
-library(ozmaps)
 dawson <- abs_ced %>% 
   filter(NAME == "Dawson") %>% 
   pull(geometry)
@@ -249,472 +244,82 @@ dawson[-69] %>%
 
 ## 6.5 Raster maps
 
-There was a problem with the {bomrang} package and it has been archived. So, the example code for the 3rd
-edition doesn't work as it is.
-
-I opened an issue about it (https://github.com/hadley/ggplot2-book/issues/338#issuecomment-1422203499), but so far there is no idea how Hadley & co. are going to replace the chapter.
-
-While waiting for the update, I'll include another example: https://tmieno2.github.io/R-as-GIS-for-Economists/create-maps.html
-
-### Creating maps from sf objects
-
 ```{r}
-# Read in the KS wells data
-gw_KS_sf <- readRDS("input/gw_KS_sf.rds")
-gw_KS_sf
+library(terra)
+library(weatherOz)
+
+# Option 1
+avail <- get_available_imagery(product_id = "IDE00425")
+
+i <- get_satellite_imagery(product_id = avail, scans = 1)
+
+plot(i)
 ```
 
 ```{r}
-# Polygons
-library(sf)
-library(tigris)
+library(stars)
 
-KS_county <- counties(
-  state = "Kansas",
-  cb    = TRUE
-) %>%
-  st_as_sf() %>%
-  st_transform(st_crs(gw_KS_sf))
+# Option 2
 
-KS_county
-```
+avail <- get_available_imagery(product_id = "IDE00425")
 
-```{r}
-# Points
-g_wells <- gw_KS_sf %>% 
-  ggplot() +
-  geom_sf()
+# Loop through all available images
+# 
+for (index in 1:1) {
+  i <- get_satellite_imagery(product_id = avail[index], scans = 1)
+  
+  # Save the satellite imagery as a .tif file with a unique name
+  output_file <- str_c("img/satellite_imagery_", index, ".tif")
+  writeRaster(i, output_file, overwrite = TRUE)
+}
 
-g_wells
-```
+sat_vis <- read_stars(
+  "img/satellite_imagery_1.tif", 
+  RasterIO = list(nBufXSize = 600, nBufYSize = 600)
+)
 
-```{r}
-g_county <- KS_county %>%
-  ggplot() +
-  geom_sf()
+sat_vis
 
-g_county
-```
-
-```{r}
-# Points
-gw_Stevens <- KS_county %>%
-  filter(NAME == "Stevens") %>%
-  st_crop(gw_KS_sf, .)
-
-p <- 
-  gw_Stevens %>% 
-  ggplot()
-
-p +
-  geom_sf(aes(color = af_used), size = 2)
-
-p +
-  geom_sf(
-    aes(size = af_used),
-    color    = "blue",
-    shape    = 15
-  )
-
-gw_Stevens %>%
-  cbind(., st_coordinates(.)) %>%
-   mutate(
-     east_west = ifelse(
-       X < -101.3,
-       "west",
-       "east")
-   ) %>%
-  ggplot() +
-  geom_sf(
-    aes(shape = east_west, color = east_west)
-  )
-```
-
-```{r}
-# Polygons
-KS_county %>%
-  ggplot() +
-  geom_sf(color = "red", fill = "darkgreen")
-
-KS_county_with_pumping <- gw_KS_sf %>%
-  filter(year == 2010) %>%
-  aggregate(., KS_county, sum, na.rm = TRUE)
-
-KS_county_with_pumping %>%
-  ggplot() +
-  geom_sf(aes(fill = af_used))
-```
-
-```{r}
-# Plotting multiple spatial objects in one figure
-ggplot() +
-  geom_sf(data = gw_KS_sf, size = 0.4) +
-  geom_sf(data = KS_county, fill = NA)
-```
-
-```{r}
-# CRS
-st_crs(KS_county)
-```
-
-```{r}
-# Convert the CRS to WGS 84/UTM zone 14N (EPSG code: 32614)
-g_32614 <- st_transform(KS_county, 32614) %>%
-  ggplot() +
-  geom_sf()
-
-g_county
-g_32614
-
-# Alternatively
-KS_county %>%
-  ggplot() +
-  geom_sf() +
-  coord_sf(crs = 32614)
-```
-
-```{r}
-# CRS of the first layer is applied for all the layers
-ggplot() +
-  geom_sf(
-    data = st_transform(KS_county, 32614)
-  ) +
-  geom_sf(data = gw_KS_sf, size = 0.4)
-```
-
-```{r}
-# Limit the geographic scope of the map
-ggplot() +
-  geom_sf(data = st_transform(KS_county, 32614)) +
-  geom_sf(data = gw_KS_sf, size = 0.4) +
-  coord_sf(crs = 4269) +
-  xlim(-99, -97) +
-  ylim(37, 39)
-```
-
-```{r}
-# Faceting
-ggplot() +
-  geom_sf(data = st_transform(KS_county, 32614)) +
-  geom_sf(data = gw_KS_sf, aes(color = af_used)) +
-  facet_wrap(vars(year))
-```
-
-```{r}
-ggplot() +
-  geom_sf(data = st_transform(KS_county, 32614)) +
-  geom_sf(data = gw_KS_sf, aes(color = af_used)) +
-  facet_wrap(
-    vars(year),
-    ncol = 1
-  )
-```
-
-```{r}
-ggplot() +
-  geom_sf(data = st_transform(KS_county, 32614)) +
-  geom_sf(data = gw_KS_sf, aes(color = af_used)) +
-  facet_wrap((af_used > 200) ~ year) +
-  theme(panel.spacing.y = unit(1, "lines"))
-```
-
-```{r}
-# Adding texts (labels) on a map
-ggplot() +
-  geom_sf(data = KS_county) +
-  geom_sf_text(
-    data      = KS_county,
-    aes(label = NAME),
-    size      = 3,
-    color     = "blue"
-  )
-
-ggplot() +
-  geom_sf(data = KS_county) +
-  geom_sf_text(
-    data          = KS_county,
-    aes(label     = NAME),
-    check_overlap = TRUE,
-    size          = 3,
-    color         = "blue"
-  )
-
-ggplot() +
-  geom_sf(data = KS_county) +
-  geom_sf_text(
-    data          = KS_county,
-    aes(label     = NAME),
-    check_overlap = TRUE,
-    size          = 3,
-    color         = "blue",
-    nudge_x       = -0.1,
-    nudge_y       = 0.1
-  )
-```
-
-```{r}
-# Individually
-Cheyenne <- KS_county %>% 
-  filter(NAME == "Cheyenne")
-
-KS_less_Cheyenne <- KS_county %>% 
-  filter(NAME != "Cheyenne")
-
-ggplot() +
-  geom_sf(data = KS_county) +
-  geom_sf_text(
-    data          = KS_less_Cheyenne,
-    aes(label     = NAME),
-    check_overlap = TRUE,
-    size          = 3,
-    color         = "blue",
-    nudge_x       = -0.1,
-    nudge_y       = 0.1
-  ) +
-  geom_sf_text(
-    data          = Cheyenne,
-    aes(label     = NAME),
-    size          = 2.5,
-    color         = "red",
-    nudge_y       = 0.2
-  )
-
-# With annotate()
-ggplot() +
-  geom_sf(data = KS_county) +
-  geom_sf_text(
-    data          = KS_less_Cheyenne,
-    aes(label     = NAME),
-    check_overlap = TRUE,
-    size          = 3,
-    color         = "blue",
-    nudge_x       = -0.1,
-    nudge_y       = 0.1
-  ) +
-  #--- use annotate to add texts on the map ---#
-  annotate(
-    geom  = "text",
-    x     = -102,
-    y     = 39.8,
-    size  = 3,
-    label = "Cheyennes",
-    color = "red"
-  )
-```
-
-### Arranging maps
-
-```{r}
-# Inset
-three_counties <- KS_county %>% 
-  filter(
-    NAME %in% c("Cheyenne", "Sherman", "Wallace")
-  )
-
-g_three_counties <- three_counties %>% 
-  ggplot() +
-  geom_sf() +
-  geom_sf_text(aes(label = NAME)) +
-  theme_void()
-
-g_three_counties
-```
-
-```{r}
-# Convert the ggplot into a grob
-grob_aoi <- ggplotGrob(g_three_counties)
-
-# Check the class
-class(grob_aoi)
-
-# Create a map of Kansas
-g_region <- ggplot() +
-  geom_sf(data = KS_county) +
-  geom_sf(
-    data  = three_counties,
-    fill  = "blue",
-    color = "red",
-    alpha = 0.5) +
-  theme_void()
-
-# Convert to a grob
-grob_region <- ggplotGrob(g_region)
-
-g_inset <- ggplot() +
-  coord_equal(
-    xlim   = c(0, 1),
-    ylim   = c(0, 1),
-    expand = FALSE
-  )
-
-g_inset
-```
-
-```{r}
-g_inset +
-  annotation_custom(
-    grob_aoi,
-    xmin = 0,
-    xmax = 0.8,
-    ymin = 0,
-    ymax = 1
-  )
-
-g_inset +
-  annotation_custom(
-    grob_aoi,
-    xmin = 0,
-    xmax = 0.8,
-    ymin = 0,
-    ymax = 1
-  ) +
-  annotation_custom(
-    grob_region,
-    xmin = 0.6,
-    xmax = 1,
-    ymin = 0,
-    ymax = 0.3
-  )
-```
-
-```{r}
-# Without border
-g_inset +
-  annotation_custom(
-    grob_aoi,
-    xmin = 0,
-    xmax = 0.8,
-    ymin = 0,
-    ymax = 1
-  ) +
-  annotation_custom(
-    grob_region,
-    xmin = 0.6,
-    xmax = 1,
-    ymin = 0,
-    ymax = 0.3
-  ) +
+ggplot() + 
+  geom_stars(data = sat_vis) + 
+  coord_equal() +
   theme_void()
 ```
 
-### Fine-tuning maps for publication
-
 ```{r}
-gw_by_county <- st_join(
-  KS_county,
-  gw_KS_sf
-) %>%
-  as_tibble() %>%
-  with_groups(
-    c(COUNTYFP, year),
-    summarize,
-    af_used = sum(af_used, na.rm = TRUE)
-  ) %>% 
-  left_join(KS_county, ., by = "COUNTYFP") %>%
-  filter(!is.na(year))
-
-gw_by_county
-```
-
-```{r}
-g_base <- gw_by_county %>% 
-  ggplot() +
-  geom_sf(aes(fill = af_used)) +
-    facet_wrap(vars(year))
-
-g_base
-```
-
-```{r}
-# Setting the theme
-g_base +
+ggplot() + 
+  geom_stars(data = sat_vis, show.legend = FALSE) +
+  facet_wrap(vars(band)) + 
+  scale_fill_gradient(low = "black", high = "white") +
+  coord_equal() +
   theme_void()
-
-theme_void()
 ```
 
 ```{r}
-g_base +
-  theme(axis.text = element_blank())
-```
+oz_states <- st_transform(oz_states, crs = st_crs(sat_vis))
 
-```{r}
-theme_for_map <-
-  theme(
-    axis.ticks       = element_blank(),
-    axis.text        = element_blank(),
-    axis.line        = element_blank(),
-    panel.border     = element_blank(),
-    panel.grid       = element_line(
-      color = "transparent"),
-    panel.background = element_blank(),
-    plot.background  = element_rect(
-      fill  = "transparent",
-      color = "transparent")
-  )
-
-g_base +
-  theme_for_map
-```
-
-```{r}
-theme_for_map_2 <- 
-  theme_void() +
-  theme(
-    strip.background = element_rect(
-      fill = "gray"
-    )
-  )
-
-g_base +
-  theme_for_map_2
-```
-
-```{r}
-p <- gw_by_county %>%
-  ggplot(aes(fill = af_used)) +
-  geom_sf() +
-  facet_grid(vars(year)) +
-  theme_bw()
-
-p
-
-p +
-  theme(
-    panel.grid = element_line(
-      color = "transparent"
-    )
-  )
-```
-
-```{r}
-g_legend <- gw_by_county %>% 
-  ggplot(aes(fill = af_used)) +
-  geom_sf() +
-  facet_wrap(vars(year)) +
+ggplot() + 
+  geom_stars(data = sat_vis, show.legend = FALSE) +
+  geom_sf(data = oz_states, fill = NA, color = "white") + 
+  coord_sf() + 
+  scale_fill_gradient(low = "black", high = "white") +
   theme_void()
+```
 
-g_legend +
-  scale_fill_viridis_c() +
-  labs(
-    fill = "Groundwater pumping (acre-feet)"
-  ) +
-  theme(
-    legend.position   = "bottom",
-    legend.key.height = unit(0.5, "cm"),
-    legend.key.width  = unit(2, "cm"),
-    legend.text       = element_text(
-      size   = 12,
-      family = "Times"
-    ),
-    legend.title      = element_text(
-      size   = 12,
-      family = "Times"
-    )
-  ) +
-  guides(
-    fill = guide_colorbar(title.position = "top")
-  )
+```{r}
+cities <- oz_capitals %>% 
+  st_as_sf(coords = c("lon", "lat"), crs = 4326, remove = FALSE)
+
+cities <- st_transform(cities, st_crs(sat_vis))
+
+ggplot() + 
+  geom_stars(data = sat_vis, show.legend = FALSE) +
+  geom_sf(data = oz_states, fill = NA, color = "white") + 
+  geom_sf(data = cities, color = "red") +
+  geom_sf_text(data = cities, mapping = aes(label = city), color = "white") + 
+  scale_fill_gradient(low = "black", high = "white") +
+  coord_sf() +
+  theme_void()
 ```
 
 ## 6.X OpenStreetMap with Dr. Dominic Royé
@@ -723,7 +328,6 @@ https://dominicroye.github.io/en/2018/accessing-openstreetmap-data-with-r/
 
 ```{r}
 library(osmdata)
-library(sf)
 library(ggmap)
 
 # The first five features

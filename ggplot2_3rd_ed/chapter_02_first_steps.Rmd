@@ -428,7 +428,7 @@ mpg %>%
   geom_boxplot()
 
 mpg %>%
-  ggplot(aes(reorder(class, hwy), hwy)) +
+  ggplot(aes(fct_reorder(class, hwy), hwy)) +
   geom_boxplot()
 ```
 
