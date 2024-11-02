@@ -96,8 +96,9 @@ ggplot2_dependencies <- ggplot2_history %>%
 ggplot2_dependencies
 
 ## Create the final tibble ----
-current_year <- Sys.Date() %>%
-    year()
+year_end <- Sys.Date() %>%
+#     year()
+year() - 1
 
 ggplot2_years_and_dependencies <- ggplot2_dependencies %>%
     inner_join(initial_release_dates) %>%
@@ -110,7 +111,7 @@ ggplot2_years_and_dependencies <- ggplot2_dependencies %>%
         # There are 32 packages that were released before 2007, which is possible
         # due to the fact that the dependency could have appeared after the initial
         # release. I decided to leave them out for the sake of clarity.
-        between(year, 2007, current_year)
+        between(year, 2007, year_end)
     )
 
 ggplot2_years_and_dependencies
@@ -125,7 +126,7 @@ colors  <- c(color_1, color_2, color_3)
 annotation_numbers <- ggplot2_years_and_dependencies %>%
     summarize(n = sum(n), .by = type) %>%
     arrange(type) %>%
-    mutate(y = c(290, 50, -245)) %>% 
+    mutate(y = c(400, 75, -325)) %>%
     mutate(
         label = case_when(
             type == "Depends"  ~ str_glue("**<span style='color:{color_1}'>{n}</span>**"),
@@ -143,6 +144,7 @@ font_family <- "Roboto"
 
 # Plot ----
 ggplot2_years_and_dependencies %>%
+    filter() %>% 
     ggplot() +
     
     ## ggplot2 releases ----
@@ -188,15 +190,15 @@ geom_point(
         lineheight    = 0.9,
         family        = font_family
     ) +
-    geom_label_repel(
-        aes(x = 2024, y = 225, label = "{ggplot2}\nver 3.5"),
-        data          = NULL,
-        stat          = "unique",
-        nudge_y       = 200,
-        label.size    = NA,
-        lineheight    = 0.9,
-        family        = font_family
-    ) +
+    # geom_label_repel(
+    #     aes(x = 2024, y = 225, label = "{ggplot2}\nver 3.5"),
+    #     data          = NULL,
+    #     stat          = "unique",
+    #     nudge_y       = 200,
+    #     label.size    = NA,
+    #     lineheight    = 0.9,
+    #     family        = font_family
+    # ) +
     
     ## Stream ----
 geom_stream(
@@ -215,8 +217,8 @@ geom_stream(
 # Text
 geom_richtext(
     aes(
-        x     = current_year + 0.1,
-        y     = 350,
+        x     = year_end + 0.1,
+        y     = 475,
         label = "Total # of<br>packages<br>currently:"
     ),
     data       = NULL,
@@ -231,7 +233,7 @@ geom_richtext(
     geom_richtext(
         data = annotation_numbers,
         aes(
-            x     = current_year + 0.2,
+            x     = year_end + 0.2,
             y     = y,
             label = label
         ),
@@ -244,8 +246,8 @@ geom_richtext(
     
     ## Scales ----
 scale_x_continuous(
-    breaks       = seq(2008, current_year, 4),
-    minor_breaks = 2007:current_year
+    breaks       = seq(2007, year_end, 2),
+    minor_breaks = 2007:year_end
 ) +
     scale_fill_manual(
         values = colors
@@ -258,7 +260,7 @@ coord_cartesian(clip = "off") +
 labs(
     title    = str_glue("Number of packages on CRAN <span style='color:{color_1}'>depending on</span>, <span style='color:{color_2}'>importing</span>, or <span style='color:{color_3}'>suggesting</span> {{ggplot2}"),
     subtitle = "Aggregated by the initial package release years. Categories may change from one version to another and were taken from the latest versions.",
-    caption  = "Data: CRAN via {pkgsearch} | Visualization: Antti Rask | Updated: 2024-07-18"
+    caption  = "Data: CRAN via {pkgsearch} | Visualization: Antti Rask | Updated: 2023-12-31"
 ) +
     
     ## Theme ----
