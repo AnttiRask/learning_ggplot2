@@ -36,22 +36,22 @@
 # Packages ----
 library(colorspace) # A Toolbox for Manipulating and Assessing Colors and Palettes
 library(conflicted) # An Alternative Conflict Resolution Strategy
-    conflicts_prefer(dplyr::filter)
-library(ggrepel)    # Automatically Position Non-Overlapping Text Labels with 'ggplot2'
-library(ggstream)   # Create Streamplots in 'ggplot2'
-library(ggtext)     # Improved Text Rendering Support for 'ggplot2'
-library(pkgsearch)  # Search and Query CRAN R Packages
-library(showtext)   # Using Fonts More Easily in R Graphs
-library(tidyverse)  # Easily Install and Load the 'Tidyverse'
+conflicts_prefer(dplyr::filter)
+library(ggrepel) # Automatically Position Non-Overlapping Text Labels with 'ggplot2'
+library(ggstream) # Create Streamplots in 'ggplot2'
+library(ggtext) # Improved Text Rendering Support for 'ggplot2'
+library(pkgsearch) # Search and Query CRAN R Packages
+library(showtext) # Using Fonts More Easily in R Graphs
+library(tidyverse) # Easily Install and Load the 'Tidyverse'
 
 # Data ----
 
 ## Vector of ggplot2 related packages ----
 ggplot2_pkg_names <- pkg_search("ggplot2", size = 6000) %>%
-    as_tibble() %>%
-    arrange(package, .locale = "en") %>% # alphabetical order, ignore case
-    filter(package != "irtplay") %>%     # irtplay was removed from CRAN and was causing an error
-    pull(package)
+  as_tibble() %>%
+  arrange(package, .locale = "en") %>% # alphabetical order, ignore case
+  filter(package != "irtplay") %>% # irtplay was removed from CRAN and was causing an error
+  pull(package)
 
 ggplot2_pkg_names
 
@@ -59,60 +59,61 @@ ggplot2_pkg_names
 
 # Note: This might take a while!
 ggplot2_history <- map_dfr(
-    ggplot2_pkg_names, function(pkg) {
-        cran_package_history(pkg) %>%
-            as_tibble()
-    }
+  ggplot2_pkg_names,
+  function(pkg) {
+    cran_package_history(pkg) %>%
+      as_tibble()
+  }
 )
 
 ggplot2_history
 
 ## Fetch initial release dates for the packages ----
 initial_release_dates <- ggplot2_history %>%
-    summarize(
-        initial_release_date = min(date) %>% as_date(),
-        .by                  = Package
-    ) %>%
-    mutate(year = year(initial_release_date))
+  summarize(
+    initial_release_date = min(date) %>% as_date(),
+    .by = Package
+  ) %>%
+  mutate(year = year(initial_release_date))
 
 initial_release_dates
 
 ## Fetch dependencies for the latest version of the packages ----
 ggplot2_dependencies <- ggplot2_history %>%
-    
-    # Have to unnest dependencies first. The nested column contains 'type', which is the type of
-    # dependency (depends/enhances/imports/suggests) and 'package', which is the package towards
-    # which there is that dependency. The confusing part is that we already have the column Package.
-    # But we're only using package to filter in only the ones that mention ggplot2 as a dependency.
-    
-    unnest(dependencies) %>%
-    filter(package == "ggplot2") %>%
-    filter(
-        date == max(date) %>% as_date(),
-        .by  = Package
-    ) %>%
-    distinct(Package, type)
+
+  # Have to unnest dependencies first. The nested column contains 'type', which is the type of
+  # dependency (depends/enhances/imports/suggests) and 'package', which is the package towards
+  # which there is that dependency. The confusing part is that we already have the column Package.
+  # But we're only using package to filter in only the ones that mention ggplot2 as a dependency.
+
+  unnest(dependencies) %>%
+  filter(package == "ggplot2") %>%
+  filter(
+    date == max(date) %>% as_date(),
+    .by = Package
+  ) %>%
+  distinct(Package, type)
 
 ggplot2_dependencies
 
 ## Create the final tibble ----
 year_end <- Sys.Date() %>%
-#     year()
-year() - 1
+  #     year()
+  year() -
+  1
 
 ggplot2_years_and_dependencies <- ggplot2_dependencies %>%
-    inner_join(initial_release_dates) %>%
-    count(year, type) %>%
-    filter(
-        
-        # Get rid of this type, because there are only 4 packages of its kind
-        type != "Enhances",
-        
-        # There are 32 packages that were released before 2007, which is possible
-        # due to the fact that the dependency could have appeared after the initial
-        # release. I decided to leave them out for the sake of clarity.
-        between(year, 2007, year_end)
-    )
+  inner_join(initial_release_dates) %>%
+  count(year, type) %>%
+  filter(
+    # Get rid of this type, because there are only 4 packages of its kind
+    type != "Enhances",
+
+    # There are 32 packages that were released before 2007, which is possible
+    # due to the fact that the dependency could have appeared after the initial
+    # release. I decided to leave them out for the sake of clarity.
+    between(year, 2007, year_end)
+  )
 
 ggplot2_years_and_dependencies
 
@@ -120,20 +121,23 @@ ggplot2_years_and_dependencies
 color_1 <- "#F36523"
 color_2 <- "#125184"
 color_3 <- "#2E8B57"
-colors  <- c(color_1, color_2, color_3)
+colors <- c(color_1, color_2, color_3)
 
 # Annotation ----
 annotation_numbers <- ggplot2_years_and_dependencies %>%
-    summarize(n = sum(n), .by = type) %>%
-    arrange(type) %>%
-    mutate(y = c(400, 75, -325)) %>%
-    mutate(
-        label = case_when(
-            type == "Depends"  ~ str_glue("**<span style='color:{color_1}'>{n}</span>**"),
-            type == "Imports"  ~ str_glue("**<span style='color:{color_2}'>{n}</span>**"),
-            type == "Suggests" ~ str_glue("**<span style='color:{color_3}'>{n}</span>**")
-        )
+  summarize(n = sum(n), .by = type) %>%
+  arrange(type) %>%
+  mutate(y = c(390, 75, -300)) %>%
+  mutate(
+    label = case_when(
+      type == "Depends" ~
+        str_glue("**<span style='color:{color_1}'>{n}</span>**"),
+      type == "Imports" ~
+        str_glue("**<span style='color:{color_2}'>{n}</span>**"),
+      type == "Suggests" ~
+        str_glue("**<span style='color:{color_3}'>{n}</span>**")
     )
+  )
 
 annotation_numbers
 
@@ -144,17 +148,18 @@ font_family <- "Roboto"
 
 # Plot ----
 ggplot2_years_and_dependencies %>%
-    filter() %>% 
-    ggplot() +
-    
-    ## ggplot2 releases ----
-geom_point(
+  filter() %>%
+  ggplot() +
+
+  ## ggplot2 releases ----
+  geom_point(
     aes(x = 2007, y = 0),
     data = NULL,
-    size  = 1.5,
-    stat  = "unique",
-) +  
-    geom_label_repel(
+    size = 1.5,
+    stat = "unique",
+  ) +
+  # fmt: skip
+  geom_label_repel(
         aes(x = 2007, y = 0, label = "{ggplot2}\nver 0.5"),
         data          = NULL,
         stat          = "unique",
@@ -163,7 +168,8 @@ geom_point(
         lineheight    = 0.9,
         family        = font_family
     ) +
-    geom_label_repel(
+  # fmt: skip
+  geom_label_repel(
         aes(x = 2014, y = 50, label = "{ggplot2}\nver 1.0"),
         data          = NULL,
         stat          = "unique",
@@ -172,7 +178,8 @@ geom_point(
         lineheight    = 0.9,
         family        = font_family
     ) +
-    geom_label_repel(
+  # fmt: skip
+  geom_label_repel(
         aes(x = 2015, y = 125, label = "{ggplot2}\nver 2.0"),
         data          = NULL,
         stat          = "unique",
@@ -181,7 +188,8 @@ geom_point(
         lineheight    = 0.9,
         family        = font_family
     ) +
-    geom_label_repel(
+  # fmt: skip
+  geom_label_repel(
         aes(x = 2018, y = 100, label = "{ggplot2}\nver 3.0"),
         data          = NULL,
         stat          = "unique",
@@ -190,82 +198,87 @@ geom_point(
         lineheight    = 0.9,
         family        = font_family
     ) +
-    # geom_label_repel(
-    #     aes(x = 2024, y = 225, label = "{ggplot2}\nver 3.5"),
-    #     data          = NULL,
-    #     stat          = "unique",
-    #     nudge_y       = 200,
-    #     label.size    = NA,
-    #     lineheight    = 0.9,
-    #     family        = font_family
-    # ) +
-    
-    ## Stream ----
-geom_stream(
-    aes(
-        x     = year,
-        y     = n,
-        fill  = type,
-        color = after_scale(darken(fill))
-    ),
-    bw        = 1,
-    linewidth = 0.1
-) +
-    
-    ## Labels ----
+  # fmt: skip
+  geom_label_repel(
+        aes(x = 2024, y = 410, label = "{ggplot2}\nver 3.5"),
+        data          = NULL,
+        stat          = "unique",
+        nudge_y       = 75,
+        label.size    = NA,
+        lineheight    = 0.8,
+        family        = font_family
+    ) +
 
-# Text
-geom_richtext(
+  ## Stream ----
+  geom_stream(
     aes(
-        x     = year_end + 0.1,
-        y     = 475,
-        label = "Total # of<br>packages<br>currently:"
+      x = year,
+      y = n,
+      fill = type,
+      color = after_scale(darken(fill))
     ),
-    data       = NULL,
-    stat       = "unique",
-    hjust      = 0,
+    bw = 1,
+    linewidth = 0.1
+  ) +
+
+  ## Labels ----
+
+  # Text
+  # geom_richtext(
+  #   aes(
+  #     x = year_end + 0.1,
+  #     y = 500,
+  #     label = "Total # of<br>packages<br>currently:"
+  #   ),
+  #   data = NULL,
+  #   stat = "unique",
+  #   hjust = 0,
+  #   lineheight = 0.9,
+  #   label.size = NA,
+  #   family = font_family
+  # ) +
+
+  # Numbers
+  geom_richtext(
+    data = annotation_numbers,
+    aes(
+      x = year_end + 0.2,
+      y = y,
+      label = label
+    ),
+    hjust = 0,
     lineheight = 0.9,
     label.size = NA,
-    family     = font_family
-) +
-    
-    # Numbers
-    geom_richtext(
-        data = annotation_numbers,
-        aes(
-            x     = year_end + 0.2,
-            y     = y,
-            label = label
-        ),
-        hjust      = 0,
-        lineheight = 0.9,
-        label.size = NA,
-        size       = 5,
-        family     = font_family
-    ) +
-    
-    ## Scales ----
-scale_x_continuous(
-    breaks       = seq(2007, year_end, 2),
+    size = 5,
+    family = font_family
+  ) +
+
+  ## Scales ----
+  scale_x_continuous(
+    breaks = seq(2008, year_end, 2),
     minor_breaks = 2007:year_end
-) +
-    scale_fill_manual(
-        values = colors
-    ) +
-    
-    ## Coord ----
-coord_cartesian(clip = "off") +
-    
-    ## Labels ----
-labs(
-    title    = str_glue("Number of packages on CRAN <span style='color:{color_1}'>depending on</span>, <span style='color:{color_2}'>importing</span>, or <span style='color:{color_3}'>suggesting</span> {{ggplot2}"),
+  ) +
+  scale_fill_manual(
+    values = colors
+  ) +
+
+  ## Coord ----
+  coord_cartesian(clip = "off") +
+
+  ## Labels ----
+  labs(
+    title = str_glue(
+      "Number of packages on CRAN in {year_end} <span style='color:{color_1}'>depending on</span>, <span style='color:{color_2}'>importing</span>, or <span style='color:{color_3}'>suggesting</span> {{ggplot2}"
+    ),
     subtitle = "Aggregated by the initial package release years. Categories may change from one version to another and were taken from the latest versions.",
-    caption  = "Data: CRAN via {pkgsearch} | Visualization: Antti Rask | Updated: 2023-12-31"
-) +
-    
-    ## Theme ----
-theme_minimal(base_family = font_family) +
-    theme(
+    caption = "Data: CRAN via {pkgsearch} | Visualization: Antti Rask | Updated: 2024-12-31"
+  ) +
+
+  ## Theme ----
+  theme_minimal(base_family = font_family) +
+  # fmt: skip
+  theme(
+        # fmt: skip
         axis.text.x = element_text(
             size   = 14,
             face   = "bold",
@@ -282,10 +295,12 @@ theme_minimal(base_family = font_family) +
             size  = 20,
             hjust = 0.5 
         ),
+        # fmt: skip
         plot.subtitle = element_text(
             hjust  = 0.5,
             margin = margin(0, 0, 20, 0)
         ),
+        # fmt: skip
         plot.caption = element_text(
             size   = 10,
             color  = darken("darkgrey", 0.4),
