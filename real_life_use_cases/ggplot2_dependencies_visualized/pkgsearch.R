@@ -148,7 +148,6 @@ font_family <- "Roboto"
 
 # Plot ----
 ggplot2_years_and_dependencies %>%
-  filter() %>%
   ggplot() +
 
   ## ggplot2 releases ----
