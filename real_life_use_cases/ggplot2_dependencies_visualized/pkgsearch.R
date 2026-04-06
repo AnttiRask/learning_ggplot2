@@ -47,7 +47,7 @@ library(tidyverse) # Easily Install and Load the 'Tidyverse'
 # Data ----
 
 ## Vector of ggplot2 related packages ----
-ggplot2_pkg_names <- pkg_search("ggplot2", size = 6000) %>%
+ggplot2_pkg_names <- pkg_search("ggplot2", size = 8000) %>%
   as_tibble() %>%
   arrange(package, .locale = "en") %>% # alphabetical order, ignore case
   filter(package != "irtplay") %>% # irtplay was removed from CRAN and was causing an error
@@ -127,7 +127,7 @@ colors <- c(color_1, color_2, color_3)
 annotation_numbers <- ggplot2_years_and_dependencies %>%
   summarize(n = sum(n), .by = type) %>%
   arrange(type) %>%
-  mutate(y = c(390, 75, -300)) %>%
+  mutate(y = c(440, 75, -350)) %>%
   mutate(
     label = case_when(
       type == "Depends" ~
@@ -154,58 +154,52 @@ ggplot2_years_and_dependencies %>%
   ## ggplot2 releases ----
   geom_point(
     aes(x = 2007, y = 0),
-    data = NULL,
-    size = 1.5,
-    stat = "unique",
+    data = tibble(),
+    size = 1.5
   ) +
   # fmt: skip
   geom_label_repel(
         aes(x = 2007, y = 0, label = "{ggplot2}\nver 0.5"),
-        data          = NULL,
-        stat          = "unique",
+        data          = tibble(),
         nudge_y       = 75,
-        label.size    = NA,
+        linewidth     = 0,
         lineheight    = 0.9,
         family        = font_family
     ) +
   # fmt: skip
   geom_label_repel(
         aes(x = 2014, y = 50, label = "{ggplot2}\nver 1.0"),
-        data          = NULL,
-        stat          = "unique",
+        data          = tibble(),
         nudge_y       = 115,
-        label.size    = NA,
+        linewidth     = 0,
         lineheight    = 0.9,
         family        = font_family
     ) +
   # fmt: skip
   geom_label_repel(
         aes(x = 2015, y = 125, label = "{ggplot2}\nver 2.0"),
-        data          = NULL,
-        stat          = "unique",
+        data          = tibble(),
         nudge_y       = 100,
-        label.size    = NA,
+        linewidth     = 0,
         lineheight    = 0.9,
         family        = font_family
     ) +
   # fmt: skip
   geom_label_repel(
         aes(x = 2018, y = 100, label = "{ggplot2}\nver 3.0"),
-        data          = NULL,
-        stat          = "unique",
+        data          = tibble(),
         nudge_y       = 200,
-        label.size    = NA,
+        linewidth     = 0,
         lineheight    = 0.9,
         family        = font_family
     ) +
   # fmt: skip
   geom_label_repel(
-        aes(x = 2024, y = 410, label = "{ggplot2}\nver 3.5"),
-        data          = NULL,
-        stat          = "unique",
-        nudge_y       = 75,
-        label.size    = NA,
-        lineheight    = 0.8,
+        aes(x = 2025, y = 455, label = "{ggplot2}\nver 4.0"),
+        data          = tibble(),
+        nudge_y       = 60,
+        linewidth     = 0,
+        lineheight    = 0.9,
         family        = font_family
     ) +
 
@@ -223,22 +217,6 @@ ggplot2_years_and_dependencies %>%
 
   ## Labels ----
 
-  # Text
-  # geom_richtext(
-  #   aes(
-  #     x = year_end + 0.1,
-  #     y = 500,
-  #     label = "Total # of<br>packages<br>currently:"
-  #   ),
-  #   data = NULL,
-  #   stat = "unique",
-  #   hjust = 0,
-  #   lineheight = 0.9,
-  #   label.size = NA,
-  #   family = font_family
-  # ) +
-
-  # Numbers
   geom_richtext(
     data = annotation_numbers,
     aes(
@@ -255,7 +233,7 @@ ggplot2_years_and_dependencies %>%
 
   ## Scales ----
   scale_x_continuous(
-    breaks = seq(2008, year_end, 2),
+    breaks = seq(2007, year_end, 2),
     minor_breaks = 2007:year_end
   ) +
   scale_fill_manual(
@@ -270,8 +248,8 @@ ggplot2_years_and_dependencies %>%
     title = str_glue(
       "Number of packages on CRAN in {year_end} <span style='color:{color_1}'>depending on</span>, <span style='color:{color_2}'>importing</span>, or <span style='color:{color_3}'>suggesting</span> {{ggplot2}"
     ),
-    subtitle = "Aggregated by the initial package release years. Categories may change from one version to another and were taken from the latest versions.",
-    caption = "Data: CRAN via {pkgsearch} | Visualization: Antti Rask | Updated: 2024-12-31"
+    subtitle = "Aggregated by the initial package release years. Categories may change from one version to another and were taken from the original versions.",
+    caption = "Data: CRAN via {pkgsearch} | Visualization: Antti Rask | Updated: 2025-12-31"
   ) +
 
   ## Theme ----
@@ -289,7 +267,7 @@ ggplot2_years_and_dependencies %>%
         legend.position       = "none",
         panel.grid.major.y    = element_blank(),
         panel.grid.minor.y    = element_blank(),
-        plot.margin           = margin(10, 50, 10, 10),
+        plot.margin           = margin(10, 50, 10, 50),
         plot.title            = element_markdown(
             face  = "bold",
             size  = 20,
